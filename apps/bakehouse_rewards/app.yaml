@@ -1,0 +1,29 @@
+# Bakehouse Rewards App Configuration
+
+env:
+  # SQL Warehouse for Lakehouse queries
+  - name: DATABRICKS_SQL_WAREHOUSE_ID
+    value: "${resources.sql_warehouse}"
+  
+  # Lakebase Postgres configuration
+  - name: LAKEBASE_PROJECT
+    value: "bakehouse-rewards-app"
+  - name: LAKEBASE_BRANCH
+    value: "production"
+  - name: LAKEBASE_DATABASE
+    value: "databricks_postgres"
+  - name: LAKEBASE_HOST
+    value: "ep-empty-unit-d8fj291l.database.us-east-2.cloud.databricks.com"
+  - name: LAKEBASE_PORT
+    value: "5432"
+
+resources:
+  sql_warehouse:
+    id: "auto"
+    permission: "CAN_USE"
+
+# App command - run the Node.js server
+command:
+  - npm
+  - run
+  - start
