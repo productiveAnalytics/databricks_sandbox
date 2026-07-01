@@ -42,7 +42,7 @@ const getLakebaseConnection = () => {
 const querySQLWarehouse = async (query: string) => {
   try {
     const result = execSync(
-      `databricks sql execute --warehouse-id "${process.env.DATABRICKS_SQL_WAREHOUSE_ID}" --query "${query.replace(/"/g, '\\"')}" --output json`,
+      `databricks sql execute --warehouse-id "${process.env.SQL_WAREHOUSE_ID}" --query "${query.replace(/"/g, '\\"')}" --output json`,
       { encoding: 'utf-8' }
     );
     return JSON.parse(result);
