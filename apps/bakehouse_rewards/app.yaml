@@ -2,7 +2,7 @@
 
 env:
   # SQL Warehouse for Lakehouse queries
-  - name: SQL_WAREHOUSE_ID
+  - name: DATABRICKS_SQL_WAREHOUSE_ID
     value: "${resources.sql_warehouse}"
   
   # Lakebase Postgres configuration

@@ -4,10 +4,8 @@
   "description": "Bakehouse Rewards Demo App built with Databricks AppKit",
   "main": "dist/server.js",
   "scripts": {
-    "prebuild": "npm install",
     "build": "tsc -p tsconfig.server.json && vite build",
-    "start": "npm run build && node dist/server.js",
-    "dev": "concurrently \"tsc -p tsconfig.server.json -w\" \"vite\""
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@databricks/appkit": "^0.1.0",
