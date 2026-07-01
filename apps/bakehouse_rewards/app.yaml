@@ -22,8 +22,8 @@ resources:
     id: "auto"
     permission: "CAN_USE"
 
-# App command - run the Node.js server
+# App command - build TypeScript and start server
 command:
-  - npm
-  - run
-  - start
+  - sh
+  - -c
+  - "tsc -p tsconfig.server.json && node dist/server.js"

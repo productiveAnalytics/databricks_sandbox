@@ -194,12 +194,31 @@ app.post('/api/redeem', async (req, res) => {
   }
 });
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve React app for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Serve a simple HTML page for now
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Bakehouse Rewards API</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          h1 { color: #8B4513; }
+          .endpoint { background: #f5f5f5; padding: 10px; margin: 10px 0; border-left: 4px solid #8B4513; }
+        </style>
+      </head>
+      <body>
+        <h1>🥐 Bakehouse Rewards API</h1>
+        <p>Backend API is running successfully!</p>
+        <h2>Available Endpoints:</h2>
+        <div class="endpoint"><strong>GET /api/customers</strong> - Get all customers with rewards</div>
+        <div class="endpoint"><strong>GET /api/customers/:id</strong> - Get customer details</div>
+        <div class="endpoint"><strong>GET /api/customers/:id/transactions</strong> - Get customer transactions</div>
+        <div class="endpoint"><strong>GET /api/customers/:id/redemptions</strong> - Get redemption history</div>
+        <div class="endpoint"><strong>POST /api/redeem</strong> - Redeem a reward</div>
+      </body>
+    </html>
+  `);
 });
 
 app.listen(port, () => {
