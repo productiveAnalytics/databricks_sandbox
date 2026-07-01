@@ -2,6 +2,10 @@
 
 Build a simple Databricks App called `Bakehouse Rewards` focused on a customer rewards redemption demo.
 
+## Github
+Use branch `databricks_app__bakehouse_rewards` from https://github.com/productiveAnalytics/databricks_sandbox.git 
+Use the existing folder structure `apps/bakehouse_rewards/` as the root of the project
+
 ## Goal
 
 Create a mobile-friendly browser experience that lets a demo user:

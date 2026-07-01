@@ -9,6 +9,10 @@ Use the npm packages:
 - `@databricks/appkit`
 - `@databricks/appkit-ui`
 
+## Github
+Use branch `databricks_app__bakehouse_rewards` from https://github.com/productiveAnalytics/databricks_sandbox.git 
+Use the existing folder structure `apps/bakehouse_rewards/` as the root of the project
+
 ## AppKit Reference
 
 Use Databricks AppKit from:
