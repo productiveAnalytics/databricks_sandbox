@@ -15,7 +15,7 @@ await createApp({
       app.get("/api/customers", async (_req, res) => {
         console.log('👥 GET /api/customers');
         try {
-          const { rows } = await appkit.analytics.query(`
+          const result = await appkit.analytics.query(`
             SELECT 
               email_address,
               points_available,
@@ -26,6 +26,20 @@ await createApp({
             ORDER BY points_available DESC
             LIMIT 50
           `);
+          
+          console.log('📊 Query result type:', typeof result);
+          console.log('📊 Query result keys:', Object.keys(result || {}));
+          
+          // Handle different response formats
+          const rows = result?.rows || result?.data || result || [];
+          
+          if (!Array.isArray(rows)) {
+            console.error('❌ Unexpected result format:', result);
+            return res.status(500).json({ 
+              error: 'Unexpected query result format', 
+              customers: [] 
+            });
+          }
           
           const customers = rows.map(row => ({
             customer_email: row.email_address,
@@ -41,6 +55,7 @@ await createApp({
           res.json({ customers });
         } catch (error) {
           console.error('❌ Error fetching customers:', error.message);
+          console.error('❌ Error stack:', error.stack);
           res.status(500).json({ error: error.message, customers: [] });
         }
       });
@@ -49,7 +64,7 @@ await createApp({
       app.get("/api/transactions/:email", async (req, res) => {
         console.log(`📋 GET /api/transactions/${req.params.email}`);
         try {
-          const { rows } = await appkit.analytics.query(`
+          const result = await appkit.analytics.query(`
             SELECT 
               t.transactionID,
               t.dateTime,
@@ -62,6 +77,8 @@ await createApp({
             ORDER BY t.dateTime DESC
             LIMIT 50
           `);
+          
+          const rows = result?.rows || result?.data || result || [];
           
           const transactions = rows.map(row => ({
             transaction_id: String(row.transactionID),

@@ -1,74 +1,36 @@
 -- Bakehouse Rewards - Lakehouse (Unity Catalog) Setup
--- OLAP layer for analytics and reporting
+-- Create workspace.bakehouse_demo schema and copy sample data from samples.bakehouse
 
--- Create catalog (if not exists)
-CREATE CATALOG IF NOT EXISTS bakehouse;
+-- Create schema in workspace catalog
+CREATE SCHEMA IF NOT EXISTS workspace.bakehouse_demo
+COMMENT 'Bakehouse customer rewards demo data';
 
--- Create schema for rewards data
-CREATE SCHEMA IF NOT EXISTS bakehouse.rewards
-COMMENT 'Bakehouse customer rewards and loyalty data';
+-- Copy sales customers from samples
+CREATE OR REPLACE TABLE workspace.bakehouse_demo.sales_customers AS
+SELECT * FROM samples.bakehouse.sales_customers;
 
-USE CATALOG bakehouse;
-USE SCHEMA rewards;
+-- Copy sales transactions from samples  
+CREATE OR REPLACE TABLE workspace.bakehouse_demo.sales_transactions AS
+SELECT * FROM samples.bakehouse.sales_transactions;
 
--- Customer rewards summary (aggregated from transactions)
-CREATE OR REPLACE TABLE customer_rewards (
-  customer_email STRING COMMENT 'Customer email address',
-  total_points INT COMMENT 'Total loyalty points earned',
-  points_redeemed INT COMMENT 'Total points redeemed',
-  points_available INT COMMENT 'Points available for redemption',
-  total_spent DECIMAL(10,2) COMMENT 'Total amount spent',
-  transaction_count INT COMMENT 'Number of transactions',
-  last_transaction_date DATE COMMENT 'Date of last transaction',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-)
-USING DELTA
-COMMENT 'Customer rewards summary for analytics';
+-- Create customer rewards view (aggregated from transactions)
+CREATE OR REPLACE VIEW workspace.bakehouse_demo.customer_rewards
+COMMENT 'Customer rewards summary aggregated from transactions' AS
+SELECT 
+  c.customerID,
+  CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
+  c.email_address,
+  COALESCE(SUM(FLOOR(t.totalPrice / 10)), 0) AS points_available,
+  COALESCE(SUM(t.totalPrice), 0) AS total_spend,
+  COUNT(t.transactionID) AS transaction_count,
+  MAX(t.dateTime) AS last_purchase_date
+FROM workspace.bakehouse_demo.sales_customers c
+LEFT JOIN workspace.bakehouse_demo.sales_transactions t
+  ON c.customerID = t.customerID
+GROUP BY c.customerID, c.first_name, c.last_name, c.email_address;
 
--- Transaction history (OLAP copy for fast analytics)
-CREATE OR REPLACE TABLE transactions (
-  transaction_id STRING COMMENT 'Unique transaction identifier',
-  customer_email STRING COMMENT 'Customer email address',
-  transaction_date DATE COMMENT 'Transaction date',
-  amount DECIMAL(10,2) COMMENT 'Transaction amount',
-  points_earned INT COMMENT 'Loyalty points earned',
-  product_category STRING COMMENT 'Product category (Coffee, Pastries, etc)',
-  store_location STRING COMMENT 'Store location',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-)
-USING DELTA
-PARTITIONED BY (transaction_date)
-COMMENT 'Transaction history for analytics';
-
--- Redemption history (OLAP copy)
-CREATE OR REPLACE TABLE redemptions (
-  redemption_id STRING COMMENT 'Unique redemption identifier',
-  customer_email STRING COMMENT 'Customer email address',
-  redemption_date DATE COMMENT 'Redemption date',
-  points_redeemed INT COMMENT 'Points redeemed',
-  reward_type STRING COMMENT 'Type of reward (Free Coffee, etc)',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-)
-USING DELTA
-PARTITIONED BY (redemption_date)
-COMMENT 'Redemption history for analytics';
-
--- Insert sample data for testing
-INSERT INTO customer_rewards VALUES
-  ('alice@example.com', 1250, 500, 750, 5000.00, 42, '2024-01-15', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
-  ('bob@example.com', 980, 200, 780, 3920.00, 28, '2024-01-14', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
-
-INSERT INTO transactions VALUES
-  ('TXN001', 'alice@example.com', '2024-01-15', 125.50, 125, 'Pastries', 'Downtown', CURRENT_TIMESTAMP()),
-  ('TXN002', 'alice@example.com', '2024-01-10', 45.00, 45, 'Coffee', 'Downtown', CURRENT_TIMESTAMP()),
-  ('TXN003', 'bob@example.com', '2024-01-14', 89.00, 89, 'Pastries', 'Uptown', CURRENT_TIMESTAMP());
-
-INSERT INTO redemptions VALUES
-  ('RED001', 'alice@example.com', '2024-01-12', 500, 'Free Coffee', CURRENT_TIMESTAMP());
-
--- Verify tables
-SHOW TABLES IN bakehouse.rewards;
-SELECT * FROM customer_rewards;
-SELECT * FROM transactions;
-SELECT * FROM redemptions;
+-- Verify setup
+SHOW TABLES IN workspace.bakehouse_demo;
+SELECT COUNT(*) AS customer_count FROM workspace.bakehouse_demo.sales_customers;
+SELECT COUNT(*) AS transaction_count FROM workspace.bakehouse_demo.sales_transactions;
+SELECT COUNT(*) AS rewards_count FROM workspace.bakehouse_demo.customer_rewards;
