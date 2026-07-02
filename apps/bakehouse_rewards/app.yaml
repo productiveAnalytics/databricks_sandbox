@@ -1,7 +1,25 @@
-# Explicitly inject sql-warehouse resource as environment variable
+# Standard resource names for AppKit auto-discovery
+# sql-warehouse: for analytics() plugin (Lakehouse/Unity Catalog)
+# postgres: for lakebase() plugin (Lakebase/Postgres)
+
 env:
+  # SQL Warehouse
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql-warehouse
+  
+  # Lakebase Postgres connection
+  - name: PGHOST
+    valueFrom: postgres
+  - name: PGDATABASE
+    valueFrom: postgres
+  - name: PGUSER
+    valueFrom: postgres
+  - name: PGPORT
+    value: "5432"
+  - name: PGSSLMODE
+    value: "require"
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
 
 command:
   - npm
