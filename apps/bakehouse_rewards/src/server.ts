@@ -1,216 +1,90 @@
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { DBSQLClient } from '@databricks/sql';
+// Bakehouse Rewards - AppKit with analytics()
+import { createApp, server, analytics } from "@databricks/appkit";
 
-const app = express();
-const port = process.env.PORT || 8000;
-
-// Databricks SQL Connection
-const sqlClient = new DBSQLClient();
-let sqlConnection: any = null;
-
-// Initialize Databricks SQL connection
-async function initDatabricksSQL() {
-  try {
-    sqlConnection = await sqlClient.connect({
-      host: process.env.DATABRICKS_HOST || '',
-      path: process.env.DATABRICKS_SQL_WAREHOUSE_PATH || '/sql/1.0/warehouses/1c1f49a0ddc0acd7',
-      token: process.env.DATABRICKS_TOKEN || '',
-    });
-    console.log('✅ Connected to Databricks SQL (Lakehouse)');
-    return true;
-  } catch (error: any) {
-    console.error('❌ Failed to connect to Databricks SQL:', error.message);
-    return false;
-  }
-}
-
-// Helper function to execute SQL queries
-async function executeSQLQuery(sql: string) {
-  if (!sqlConnection) {
-    throw new Error('Database connection not initialized');
-  }
-  
-  const session = await sqlConnection.openSession();
-  try {
-    const queryOperation = await session.executeStatement(sql, {
-      runAsync: false,
-      maxRows: 1000,
-    });
+await createApp({
+  plugins: [server(), analytics({})],
+  onPluginsReady(appkit) {
+    console.log('✅ Plugins ready, registering routes...');
     
-    const result = await queryOperation.fetchAll();
-    await queryOperation.close();
-    return result;
-  } finally {
-    await session.close();
-  }
-}
-
-// Middleware
-app.use(express.json());
-app.use(cors());
-
-// Serve static files from Vite build output
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    message: 'Bakehouse Rewards API is running',
-    timestamp: new Date().toISOString(),
-    services: {
-      lakehouse: sqlConnection ? 'connected (Unity Catalog)' : 'disconnected',
-      lakebase: 'pending (will be added next)'
-    }
-  });
-});
-
-// Config check
-app.get('/api/config', (req, res) => {
-  res.json({
-    sql_warehouse_id: process.env.SQL_WAREHOUSE_ID || 'not configured',
-    lakebase: {
-      project: process.env.LAKEBASE_PROJECT || 'not configured',
-      branch: process.env.LAKEBASE_BRANCH || 'not configured',
-      database: process.env.LAKEBASE_DATABASE || 'not configured',
-      host: process.env.LAKEBASE_HOST ? 'configured' : 'not configured'
-    }
-  });
-});
-
-// Lakehouse endpoint: Get top customers (REAL DATA from Unity Catalog)
-app.get('/api/customers', async (req, res) => {
-  try {
-    const sql = `
-      SELECT 
-        customer_email,
-        total_points,
-        points_redeemed,
-        points_available,
-        total_spent,
-        transaction_count,
-        last_transaction_date
-      FROM bakehouse.rewards.customer_rewards
-      ORDER BY total_points DESC
-      LIMIT 50
-    `;
-    
-    const customers = await executeSQLQuery(sql);
-    res.json({ customers, source: 'Unity Catalog (bakehouse.rewards.customer_rewards)' });
-  } catch (error: any) {
-    console.error('Error fetching customers:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch customers',
-      message: error.message 
-    });
-  }
-});
-
-// Lakehouse endpoint: Get transactions (REAL DATA from Unity Catalog)
-app.get('/api/transactions/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    const sql = `
-      SELECT 
-        transaction_id,
-        transaction_date,
-        amount,
-        points_earned,
-        product_category
-      FROM bakehouse.rewards.transactions
-      WHERE customer_email = '${email}'
-      ORDER BY transaction_date DESC
-      LIMIT 50
-    `;
-
-    const transactions = await executeSQLQuery(sql);
-    res.json({ transactions, source: 'Unity Catalog (bakehouse.rewards.transactions)' });
-  } catch (error: any) {
-    console.error('Error fetching transactions:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch transactions',
-      message: error.message 
-    });
-  }
-});
-
-// Lakehouse endpoint: Get redemption history (REAL DATA from Unity Catalog)
-app.get('/api/redemptions/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    const sql = `
-      SELECT 
-        redemption_id,
-        customer_email,
-        points_redeemed,
-        reward_type,
-        redemption_date
-      FROM bakehouse.rewards.redemptions
-      WHERE customer_email = '${email}'
-      ORDER BY redemption_date DESC
-      LIMIT 50
-    `;
-
-    const redemptions = await executeSQLQuery(sql);
-    res.json({ redemptions, source: 'Unity Catalog (bakehouse.rewards.redemptions)' });
-  } catch (error: any) {
-    console.error('Error fetching redemptions:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch redemptions',
-      message: error.message 
-    });
-  }
-});
-
-// Lakebase endpoint: Redeem points (MOCK for now - will use PostgreSQL next)
-app.post('/api/redeem', async (req, res) => {
-  try {
-    const { customer_email, points_redeemed, reward_type } = req.body;
-    
-    if (!customer_email || !points_redeemed || !reward_type) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: customer_email, points_redeemed, reward_type' 
+    appkit.server.extend((app) => {
+      // MOCK Customers endpoint for testing UI
+      app.get("/api/customers", async (_req, res) => {
+        console.log('👥 GET /api/customers - MOCK DATA');
+        
+        // Mock customer data with correct field names for frontend
+        const mockCustomers = [
+          {
+            customer_email: "alice@example.com",
+            total_points: 1250,
+            points_redeemed: 500,
+            points_available: 750,
+            total_spent: 5000.00,
+            transaction_count: 42,
+            last_transaction_date: "2024-01-15"
+          },
+          {
+            customer_email: "bob@example.com",
+            total_points: 980,
+            points_redeemed: 200,
+            points_available: 780,
+            total_spent: 3920.00,
+            transaction_count: 28,
+            last_transaction_date: "2024-01-14"
+          },
+          {
+            customer_email: "charlie@example.com",
+            total_points: 450,
+            points_redeemed: 100,
+            points_available: 350,
+            total_spent: 1800.00,
+            transaction_count: 15,
+            last_transaction_date: "2024-01-13"
+          }
+        ];
+        
+        console.log(`✅ Returning ${mockCustomers.length} mock customers`);
+        res.json({ customers: mockCustomers });
       });
-    }
 
-    // Mock redemption for now - will use Lakebase PostgreSQL next
-    const redemption = {
-      redemption_id: 'RED' + Date.now(),
-      customer_email,
-      points_redeemed,
-      reward_type,
-      redemption_date: new Date().toISOString()
-    };
+      // MOCK Transactions endpoint
+      app.get("/api/transactions/:email", async (req, res) => {
+        console.log(`📋 GET /api/transactions/${req.params.email} - MOCK DATA`);
+        
+        const mockTransactions = [
+          {
+            transaction_id: "TXN001",
+            transaction_date: "2024-01-15",
+            amount: 150.00,
+            points_earned: 15,
+            product_category: "Pastries"
+          },
+          {
+            transaction_id: "TXN002",
+            transaction_date: "2024-01-10",
+            amount: 85.50,
+            points_earned: 9,
+            product_category: "Breads"
+          }
+        ];
+        
+        console.log(`✅ Returning ${mockTransactions.length} mock transactions`);
+        res.json({ transactions: mockTransactions });
+      });
 
-    res.json({ 
-      success: true,
-      redemption,
-      note: 'Mock data - Lakebase PostgreSQL integration coming next'
+      // Mock Lakebase endpoints
+      app.get("/api/redemptions/:email", (_req, res) => {
+        console.log('🎁 GET /api/redemptions - MOCK DATA');
+        res.json({ redemptions: [] });
+      });
+
+      app.post("/api/redeem", (_req, res) => {
+        console.log('💳 POST /api/redeem - MOCK');
+        res.json({ success: true });
+      });
+
+      console.log('✅ Routes registered (MOCK MODE)');
     });
-  } catch (error: any) {
-    res.status(500).json({ 
-      error: 'Failed to redeem points',
-      message: error.message 
-    });
-  }
+  },
 });
 
-// Initialize and start server
-async function startServer() {
-  await initDatabricksSQL();
-  
-  app.listen(port, () => {
-    console.log(`✅ Bakehouse Rewards app running on port ${port}`);
-    console.log(`✅ Connected to Lakehouse: ${sqlConnection ? 'YES' : 'NO'}`);
-    console.log('🔗 Ready to serve real data from Unity Catalog!');
-  });
-}
-
-startServer().catch(error => {
-  console.error('❌ Failed to start server:', error);
-  process.exit(1);
-});
+console.log('🎉 Bakehouse Rewards ready (MOCK MODE)');
