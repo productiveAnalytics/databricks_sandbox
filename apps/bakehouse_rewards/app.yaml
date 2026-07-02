@@ -1,27 +1,7 @@
 env:
-  - name: DATABRICKS_HOST
-    value: "${workspace.host}"
-  - name: DATABRICKS_HTTP_PATH
-    value: "${resources.sql_warehouse.http_path}"
-  - name: DATABRICKS_TOKEN
-    value: "${secrets.app.token}"
-  - name: LAKEBASE_HOST
-    value: "ep-empty-unit-d8fj291l.database.us-east-2.cloud.databricks.com"
-  - name: LAKEBASE_PORT
-    value: "5432"
-  - name: LAKEBASE_DATABASE
-    value: "databricks_postgres"
-  - name: LAKEBASE_PROJECT
-    value: "bakehouse-rewards-app"
-  - name: LAKEBASE_BRANCH
-    value: "production"
-
-resources:
-  sql_warehouse:
-    id: "auto"
-    permission: "CAN_USE"
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: serverless-sql-warehouse
 
 command:
-  - sh
-  - -c
-  - "npm run build && npm start"
+  - npm
+  - start
