@@ -1,95 +1,102 @@
-// Bakehouse Rewards - AppKit with analytics()
+// Bakehouse Rewards - AppKit with analytics() for Unity Catalog
 import { createApp, server, analytics } from "@databricks/appkit";
 
-console.log('🚀 Starting Bakehouse Rewards...');
+console.log('🚀 Starting Bakehouse Rewards with Unity Catalog integration...');
 
 // Create AppKit instance with plugins and onPluginsReady callback
 await createApp({
   plugins: [server(), analytics({})],
   onPluginsReady(appkit) {
-    console.log('✅ Plugins ready! Registering routes...');
+    console.log('✅ Plugins ready! Registering routes with Unity Catalog queries...');
     
     appkit.server.extend((app) => {
-      console.log('🎯 Inside extend callback, registering endpoints...');
+      console.log('🎯 Registering API endpoints...');
       
-      // MOCK Customers endpoint
+      // Get all customers from Unity Catalog
       app.get("/api/customers", async (_req, res) => {
-        console.log('👥 GET /api/customers - MOCK DATA');
-        
-        const mockCustomers = [
-          {
-            customer_email: "alice@example.com",
-            total_points: 1250,
-            points_redeemed: 500,
-            points_available: 750,
-            total_spent: 5000.00,
-            transaction_count: 42,
-            last_transaction_date: "2024-01-15"
-          },
-          {
-            customer_email: "bob@example.com",
-            total_points: 980,
-            points_redeemed: 200,
-            points_available: 780,
-            total_spent: 3920.00,
-            transaction_count: 28,
-            last_transaction_date: "2024-01-14"
-          },
-          {
-            customer_email: "charlie@example.com",
-            total_points: 450,
-            points_redeemed: 100,
-            points_available: 350,
-            total_spent: 1800.00,
-            transaction_count: 15,
-            last_transaction_date: "2024-01-13"
-          }
-        ];
-        
-        console.log(`✅ Returning ${mockCustomers.length} mock customers`);
-        res.json({ customers: mockCustomers });
+        console.log('👥 GET /api/customers - Unity Catalog');
+        try {
+          const { rows } = await appkit.analytics.query(`
+            SELECT 
+              email_address,
+              points_available,
+              total_spend,
+              transaction_count,
+              last_purchase_date
+            FROM workspace.bakehouse_demo.customer_rewards
+            ORDER BY points_available DESC
+            LIMIT 50
+          `);
+          
+          // Map UC column names to frontend expected names
+          const customers = rows.map(row => ({
+            customer_email: row.email_address,
+            total_points: row.points_available, // Using available as total for now
+            points_redeemed: 0, // TODO: Calculate from redemptions table
+            points_available: row.points_available,
+            total_spent: row.total_spend,
+            transaction_count: row.transaction_count,
+            last_transaction_date: row.last_purchase_date
+          }));
+          
+          console.log(`✅ Retrieved ${customers.length} customers from Unity Catalog`);
+          res.json({ customers });
+        } catch (error) {
+          console.error('❌ Error fetching customers:', error.message);
+          res.status(500).json({ error: error.message, customers: [] });
+        }
       });
 
-      // MOCK Transactions endpoint
+      // Get transactions for a specific customer
       app.get("/api/transactions/:email", async (req, res) => {
-        console.log(`📋 GET /api/transactions/${req.params.email} - MOCK DATA`);
-        
-        const mockTransactions = [
-          {
-            transaction_id: "TXN001",
-            transaction_date: "2024-01-15",
-            amount: 150.00,
-            points_earned: 15,
-            product_category: "Pastries"
-          },
-          {
-            transaction_id: "TXN002",
-            transaction_date: "2024-01-10",
-            amount: 85.50,
-            points_earned: 9,
-            product_category: "Breads"
-          }
-        ];
-        
-        console.log(`✅ Returning ${mockTransactions.length} mock transactions`);
-        res.json({ transactions: mockTransactions });
+        console.log(`📋 GET /api/transactions/${req.params.email} - Unity Catalog`);
+        try {
+          const { rows } = await appkit.analytics.query(`
+            SELECT 
+              t.transactionID,
+              t.dateTime,
+              t.totalPrice,
+              t.product
+            FROM workspace.bakehouse_demo.sales_transactions t
+            INNER JOIN workspace.bakehouse_demo.sales_customers c
+              ON t.customerID = c.customerID
+            WHERE c.email_address = '${req.params.email}'
+            ORDER BY t.dateTime DESC
+            LIMIT 50
+          `);
+          
+          // Map to frontend expected format
+          const transactions = rows.map(row => ({
+            transaction_id: String(row.transactionID),
+            transaction_date: row.dateTime,
+            amount: row.totalPrice,
+            points_earned: Math.floor(row.totalPrice / 10), // 1 point per $10
+            product_category: row.product
+          }));
+          
+          console.log(`✅ Retrieved ${transactions.length} transactions`);
+          res.json({ transactions });
+        } catch (error) {
+          console.error('❌ Error fetching transactions:', error.message);
+          res.status(500).json({ error: error.message, transactions: [] });
+        }
       });
 
-      // Mock redemptions
+      // Mock redemptions endpoint (will implement with Lakebase later)
       app.get("/api/redemptions/:email", async (_req, res) => {
-        console.log('🎁 GET /api/redemptions - MOCK DATA');
+        console.log('🎁 GET /api/redemptions - MOCK (Lakebase integration pending)');
         res.json({ redemptions: [] });
       });
 
-      // Mock redeem
+      // Mock redeem endpoint (will implement with Lakebase later)
       app.post("/api/redeem", async (_req, res) => {
-        console.log('💳 POST /api/redeem - MOCK');
+        console.log('💳 POST /api/redeem - MOCK (Lakebase integration pending)');
         res.json({ success: true });
       });
       
-      console.log('✅ ALL 4 ROUTES REGISTERED SUCCESSFULLY');
+      console.log('✅ All routes registered with Unity Catalog integration');
     });
   },
 });
 
-console.log('🎉 Bakehouse Rewards ready (MOCK MODE)');
+console.log('🎉 Bakehouse Rewards ready with Unity Catalog!');
