@@ -1,9 +1,51 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import { DBSQLClient } from '@databricks/sql';
 
 const app = express();
 const port = process.env.PORT || 8000;
+
+// Databricks SQL Connection
+const sqlClient = new DBSQLClient();
+let sqlConnection: any = null;
+
+// Initialize Databricks SQL connection
+async function initDatabricksSQL() {
+  try {
+    sqlConnection = await sqlClient.connect({
+      host: process.env.DATABRICKS_HOST || '',
+      path: process.env.DATABRICKS_SQL_WAREHOUSE_PATH || '/sql/1.0/warehouses/1c1f49a0ddc0acd7',
+      token: process.env.DATABRICKS_TOKEN || '',
+    });
+    console.log('✅ Connected to Databricks SQL (Lakehouse)');
+    return true;
+  } catch (error: any) {
+    console.error('❌ Failed to connect to Databricks SQL:', error.message);
+    return false;
+  }
+}
+
+// Helper function to execute SQL queries
+async function executeSQLQuery(sql: string) {
+  if (!sqlConnection) {
+    throw new Error('Database connection not initialized');
+  }
+  
+  const session = await sqlConnection.openSession();
+  try {
+    const queryOperation = await session.executeStatement(sql, {
+      runAsync: false,
+      maxRows: 1000,
+    });
+    
+    const result = await queryOperation.fetchAll();
+    await queryOperation.close();
+    return result;
+  } finally {
+    await session.close();
+  }
+}
 
 // Middleware
 app.use(express.json());
@@ -19,8 +61,8 @@ app.get('/api/health', (req, res) => {
     message: 'Bakehouse Rewards API is running',
     timestamp: new Date().toISOString(),
     services: {
-      lakehouse: 'ready (mock data)',
-      lakebase: 'ready (mock data)'
+      lakehouse: sqlConnection ? 'connected (Unity Catalog)' : 'disconnected',
+      lakebase: 'pending (will be added next)'
     }
   });
 });
@@ -38,33 +80,27 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// Lakehouse endpoint: Get top customers (MOCK DATA)
+// Lakehouse endpoint: Get top customers (REAL DATA from Unity Catalog)
 app.get('/api/customers', async (req, res) => {
   try {
-    // Mock data for now - will be replaced with real Databricks SQL queries
-    const customers = [
-      {
-        customer_email: 'alice@example.com',
-        total_points: 1250,
-        points_redeemed: 500,
-        points_available: 750,
-        total_spent: 5000.00,
-        transaction_count: 42,
-        last_transaction_date: '2024-01-15'
-      },
-      {
-        customer_email: 'bob@example.com',
-        total_points: 980,
-        points_redeemed: 200,
-        points_available: 780,
-        total_spent: 3920.00,
-        transaction_count: 28,
-        last_transaction_date: '2024-01-14'
-      }
-    ];
+    const sql = `
+      SELECT 
+        customer_email,
+        total_points,
+        points_redeemed,
+        points_available,
+        total_spent,
+        transaction_count,
+        last_transaction_date
+      FROM bakehouse.rewards.customer_rewards
+      ORDER BY total_points DESC
+      LIMIT 50
+    `;
     
-    res.json({ customers, note: 'Mock data - real Databricks integration coming next' });
+    const customers = await executeSQLQuery(sql);
+    res.json({ customers, source: 'Unity Catalog (bakehouse.rewards.customer_rewards)' });
   } catch (error: any) {
+    console.error('Error fetching customers:', error);
     res.status(500).json({ 
       error: 'Failed to fetch customers',
       message: error.message 
@@ -72,56 +108,28 @@ app.get('/api/customers', async (req, res) => {
   }
 });
 
-// Lakehouse endpoint: Get customer details (MOCK DATA)
-app.get('/api/customers/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    // Mock data
-    const customer = {
-      customer_email: email,
-      total_points: 1250,
-      points_redeemed: 500,
-      points_available: 750,
-      total_spent: 5000.00,
-      transaction_count: 42,
-      last_transaction_date: '2024-01-15'
-    };
-
-    res.json({ customer, note: 'Mock data - real Databricks integration coming next' });
-  } catch (error: any) {
-    res.status(500).json({ 
-      error: 'Failed to fetch customer',
-      message: error.message 
-    });
-  }
-});
-
-// Lakehouse endpoint: Get transactions (MOCK DATA)
+// Lakehouse endpoint: Get transactions (REAL DATA from Unity Catalog)
 app.get('/api/transactions/:email', async (req, res) => {
   try {
     const { email } = req.params;
     
-    // Mock data
-    const transactions = [
-      {
-        transaction_id: 'TXN001',
-        transaction_date: '2024-01-15',
-        amount: 125.50,
-        points_earned: 125,
-        product_category: 'Pastries'
-      },
-      {
-        transaction_id: 'TXN002',
-        transaction_date: '2024-01-10',
-        amount: 45.00,
-        points_earned: 45,
-        product_category: 'Coffee'
-      }
-    ];
+    const sql = `
+      SELECT 
+        transaction_id,
+        transaction_date,
+        amount,
+        points_earned,
+        product_category
+      FROM bakehouse.rewards.transactions
+      WHERE customer_email = '${email}'
+      ORDER BY transaction_date DESC
+      LIMIT 50
+    `;
 
-    res.json({ transactions, note: 'Mock data - real Databricks integration coming next' });
+    const transactions = await executeSQLQuery(sql);
+    res.json({ transactions, source: 'Unity Catalog (bakehouse.rewards.transactions)' });
   } catch (error: any) {
+    console.error('Error fetching transactions:', error);
     res.status(500).json({ 
       error: 'Failed to fetch transactions',
       message: error.message 
@@ -129,7 +137,36 @@ app.get('/api/transactions/:email', async (req, res) => {
   }
 });
 
-// Lakebase endpoint: Redeem points (MOCK)
+// Lakehouse endpoint: Get redemption history (REAL DATA from Unity Catalog)
+app.get('/api/redemptions/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    const sql = `
+      SELECT 
+        redemption_id,
+        customer_email,
+        points_redeemed,
+        reward_type,
+        redemption_date
+      FROM bakehouse.rewards.redemptions
+      WHERE customer_email = '${email}'
+      ORDER BY redemption_date DESC
+      LIMIT 50
+    `;
+
+    const redemptions = await executeSQLQuery(sql);
+    res.json({ redemptions, source: 'Unity Catalog (bakehouse.rewards.redemptions)' });
+  } catch (error: any) {
+    console.error('Error fetching redemptions:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch redemptions',
+      message: error.message 
+    });
+  }
+});
+
+// Lakebase endpoint: Redeem points (MOCK for now - will use PostgreSQL next)
 app.post('/api/redeem', async (req, res) => {
   try {
     const { customer_email, points_redeemed, reward_type } = req.body;
@@ -140,7 +177,7 @@ app.post('/api/redeem', async (req, res) => {
       });
     }
 
-    // Mock redemption
+    // Mock redemption for now - will use Lakebase PostgreSQL next
     const redemption = {
       redemption_id: 'RED' + Date.now(),
       customer_email,
@@ -152,7 +189,7 @@ app.post('/api/redeem', async (req, res) => {
     res.json({ 
       success: true,
       redemption,
-      note: 'Mock data - real Lakebase integration coming next'
+      note: 'Mock data - Lakebase PostgreSQL integration coming next'
     });
   } catch (error: any) {
     res.status(500).json({ 
@@ -162,32 +199,18 @@ app.post('/api/redeem', async (req, res) => {
   }
 });
 
-// Lakebase endpoint: Get redemption history (MOCK)
-app.get('/api/redemptions/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    // Mock data
-    const redemptions = [
-      {
-        redemption_id: 'RED001',
-        customer_email: email,
-        points_redeemed: 500,
-        reward_type: 'Free Coffee',
-        redemption_date: '2024-01-12'
-      }
-    ];
+// Initialize and start server
+async function startServer() {
+  await initDatabricksSQL();
+  
+  app.listen(port, () => {
+    console.log(`✅ Bakehouse Rewards app running on port ${port}`);
+    console.log(`✅ Connected to Lakehouse: ${sqlConnection ? 'YES' : 'NO'}`);
+    console.log('🔗 Ready to serve real data from Unity Catalog!');
+  });
+}
 
-    res.json({ redemptions, note: 'Mock data - real Lakebase integration coming next' });
-  } catch (error: any) {
-    res.status(500).json({ 
-      error: 'Failed to fetch redemptions',
-      message: error.message 
-    });
-  }
-});
-
-app.listen(port, () => {
-  console.log(`Bakehouse Rewards app running on port ${port}`);
-  console.log('Note: Currently using mock data. Database integration will be added next.');
+startServer().catch(error => {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
 });
