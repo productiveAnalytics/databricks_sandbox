@@ -1,11 +1,11 @@
-// Bakehouse Rewards - AppKit with analytics() for Unity Catalog
-import { createApp, server, analytics } from "@databricks/appkit";
+// Bakehouse Rewards - AppKit with analytics() and lakebase()
+import { createApp, server, analytics, lakebase } from "@databricks/appkit";
 
-console.log('🚀 Starting Bakehouse Rewards with Unity Catalog integration...');
+console.log('🚀 Starting Bakehouse Rewards with Unity Catalog + Lakebase integration...');
 
 // Create AppKit instance with plugins and onPluginsReady callback
 await createApp({
-  plugins: [server(), analytics({})],
+  plugins: [server(), analytics({}), lakebase()],
   onPluginsReady(appkit) {
     console.log('✅ Plugins ready! Registering routes with Unity Catalog queries...');
     
