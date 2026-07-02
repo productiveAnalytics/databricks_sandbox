@@ -1,25 +1,23 @@
--- Bakehouse Rewards - Grant Permissions
--- Grant Unity Catalog permissions to app service principal
+-- Bakehouse Rewards - Grant Unity Catalog Permissions
+/*
+The service principal display name is 'app-29pbq7 bakehouse-rewards', but Unity Catalog requires the client ID (with backtick): `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`
+*/
 
--- Replace with your actual app service principal
--- Get from: databricks apps get bakehouse-rewards | grep service_principal_name
-SET VAR app_sp = 'app-29pbq7 bakehouse-rewards';
+
+-- Grant permissions to app service principal for workspace.bakehouse_demo schema
 
 -- Grant catalog usage
-GRANT USE CATALOG ON CATALOG bakehouse TO `${app_sp}`;
+GRANT USE CATALOG ON CATALOG workspace TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
 
 -- Grant schema usage
-GRANT USE SCHEMA ON SCHEMA bakehouse.rewards TO `${app_sp}`;
+GRANT USE SCHEMA ON SCHEMA workspace.bakehouse_demo TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
 
--- Grant SELECT on tables (read-only for OLAP)
-GRANT SELECT ON TABLE bakehouse.rewards.customer_rewards TO `${app_sp}`;
-GRANT SELECT ON TABLE bakehouse.rewards.transactions TO `${app_sp}`;
-GRANT SELECT ON TABLE bakehouse.rewards.redemptions TO `${app_sp}`;
-
--- Grant MODIFY if app needs to write (e.g. for analytics updates)
--- GRANT MODIFY ON TABLE bakehouse.rewards.customer_rewards TO `${app_sp}`;
+-- Grant SELECT on tables (read-only access)
+GRANT SELECT ON TABLE workspace.bakehouse_demo.customer_rewards TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_customers TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_transactions TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
 
 -- Verify permissions
-SHOW GRANTS ON CATALOG bakehouse;
-SHOW GRANTS ON SCHEMA bakehouse.rewards;
-SHOW GRANTS ON TABLE bakehouse.rewards.customer_rewards;
+SHOW GRANTS ON CATALOG workspace;
+SHOW GRANTS ON SCHEMA workspace.bakehouse_demo;
+SHOW GRANTS ON TABLE workspace.bakehouse_demo.customer_rewards;
