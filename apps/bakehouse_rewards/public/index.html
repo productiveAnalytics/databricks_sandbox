@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakehouse Rewards - Customer Portal</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #8B4513;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #8B4513;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            color: #8B4513;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .customer-select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .customer-select:focus {
+            outline: none;
+            border-color: #8B4513;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f8f8;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #8B4513;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #6d3410;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .redeem-form {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #8B4513;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f5c6cb;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c3e6cb;
+            margin-bottom: 20px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [customers, setCustomers] = useState([]);
+            const [selectedCustomer, setSelectedCustomer] = useState(null);
+            const [transactions, setTransactions] = useState([]);
+            const [redemptions, setRedemptions] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [success, setSuccess] = useState(null);
+            const [rewardType, setRewardType] = useState('');
+
+            useEffect(() => {
+                fetchCustomers();
+            }, []);
+
+            useEffect(() => {
+                if (selectedCustomer) {
+                    fetchTransactions(selectedCustomer.customer_email);
+                    fetchRedemptions(selectedCustomer.customer_email);
+                }
+            }, [selectedCustomer]);
+
+            const fetchCustomers = async () => {
+                try {
+                    const response = await fetch('/api/customers');
+                    const data = await response.json();
+                    setCustomers(data.customers || []);
+                    if (data.customers && data.customers.length > 0) {
+                        setSelectedCustomer(data.customers[0]);
+                    }
+                    setLoading(false);
+                } catch (err) {
+                    setError('Failed to load customers');
+                    setLoading(false);
+                }
+            };
+
+            const fetchTransactions = async (email) => {
+                try {
+                    const response = await fetch(`/api/transactions/${email}`);
+                    const data = await response.json();
+                    setTransactions(data.transactions || []);
+                } catch (err) {
+                    console.error('Failed to load transactions:', err);
+                }
+            };
+
+            const fetchRedemptions = async (email) => {
+                try {
+                    const response = await fetch(`/api/redemptions/${email}`);
+                    const data = await response.json();
+                    setRedemptions(data.redemptions || []);
+                } catch (err) {
+                    console.error('Failed to load redemptions:', err);
+                }
+            };
+
+            const handleRedeem = async (e) => {
+                e.preventDefault();
+                setError(null);
+                setSuccess(null);
+
+                if (!rewardType) {
+                    setError('Please select a reward type');
+                    return;
+                }
+
+                // Extract points from reward type string (e.g., "Free Coffee (100 points)")
+                const pointsMatch = rewardType.match(/\((\d+) points\)/);
+                if (!pointsMatch) {
+                    setError('Invalid reward type selected');
+                    return;
+                }
+                
+                const points = parseInt(pointsMatch[1]);
+                if (points > selectedCustomer.points_available) {
+                    setError(`Insufficient points. You need ${points} points but only have ${selectedCustomer.points_available} available.`);
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/redeem', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            customer_email: selectedCustomer.customer_email,
+                            points_redeemed: points,
+                            reward_type: rewardType
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        setSuccess(`Successfully redeemed ${points} points for ${rewardType}!`);
+                        setRewardType('');
+                        fetchRedemptions(selectedCustomer.customer_email);
+                    } else {
+                        setError(data.error || 'Redemption failed');
+                    }
+                } catch (err) {
+                    setError('Failed to process redemption');
+                }
+            };
+
+            if (loading) {
+                return <div className="loading">Loading...</div>;
+            }
+
+            if (!selectedCustomer) {
+                return <div className="container"><div className="empty">No customers found</div></div>;
+            }
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>🥐 Bakehouse Rewards</h1>
+                        <p>Customer Loyalty Portal</p>
+                    </div>
+
+                    <select 
+                        className="customer-select"
+                        value={selectedCustomer.customer_email}
+                        onChange={(e) => {
+                            const customer = customers.find(c => c.customer_email === e.target.value);
+                            setSelectedCustomer(customer);
+                        }}
+                    >
+                        {customers.map(customer => (
+                            <option key={customer.customer_email} value={customer.customer_email}>
+                                {customer.customer_email}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <h3>Total Points</h3>
+                            <div className="value">{selectedCustomer.total_points?.toLocaleString() || 0}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Available Points</h3>
+                            <div className="value">{selectedCustomer.points_available?.toLocaleString() || 0}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Total Spent</h3>
+                            <div className="value">${selectedCustomer.total_spent?.toLocaleString() || 0}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Transactions</h3>
+                            <div className="value">{selectedCustomer.transaction_count || 0}</div>
+                        </div>
+                    </div>
+
+                    <div className="section">
+                        <h2>💳 Redeem Points</h2>
+                        {error && <div className="error">{error}</div>}
+                        {success && <div className="success">{success}</div>}
+                        <form className="redeem-form" onSubmit={handleRedeem}>
+                            <div className="form-group">
+                                <label>Reward Type</label>
+                                <select 
+                                    value={rewardType}
+                                    onChange={(e) => setRewardType(e.target.value)}
+                                >
+                                    <option value="">Select reward...</option>
+                                    <option value="Free Coffee (100 points)">Free Coffee (100 points)</option>
+                                    <option value="Free Pastry (150 points)">Free Pastry (150 points)</option>
+                                    <option value="$5 Discount (250 points)">$5 Discount (250 points)</option>
+                                    <option value="$10 Discount (500 points)">$10 Discount (500 points)</option>
+                                </select>
+                            </div>
+                            <button type="submit" className="btn btn-primary">
+                                Redeem Now
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="section">
+                        <h2>📊 Recent Transactions</h2>
+                        {transactions.length === 0 ? (
+                            <div className="empty">No transactions found</div>
+                        ) : (
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Transaction ID</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Points Earned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactions.map(txn => (
+                                        <tr key={txn.transaction_id}>
+                                            <td>{txn.transaction_date}</td>
+                                            <td>{txn.transaction_id}</td>
+                                            <td><span className="badge badge-info">{txn.product_category}</span></td>
+                                            <td>${txn.amount?.toFixed(2) || '0.00'}</td>
+                                            <td>+{txn.points_earned}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+
+                    <div className="section">
+                        <h2>🎁 Redemption History</h2>
+                        {redemptions.length === 0 ? (
+                            <div className="empty">No redemptions yet</div>
+                        ) : (
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Redemption ID</th>
+                                        <th>Reward Type</th>
+                                        <th>Points Redeemed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {redemptions.map(red => (
+                                        <tr key={red.redemption_id}>
+                                            <td>{red.redemption_date}</td>
+                                            <td>{red.redemption_id}</td>
+                                            <td><span className="badge badge-success">{red.reward_type}</span></td>
+                                            <td>-{red.points_redeemed}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
