@@ -1,0 +1,12 @@
+Tag: v1.0-lakehouse-integration
+Date: 2026-07-02
+Branch: databricks_app__bakehouse_rewards
+Commit: (latest on branch)
+
+Lakehouse (Unity Catalog) integration complete
+- SQL Warehouse configured
+- Unity Catalog queries working
+- Service principal permissions granted
+- Frontend displaying live data
+
+App URL: https://bakehouse-rewards-1919035682675012.aws.databricksapps.com
