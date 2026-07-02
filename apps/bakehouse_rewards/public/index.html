@@ -18,6 +18,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
             padding: 20px;
+            min-height: 100vh;
         }
 
         .container {
@@ -99,11 +100,6 @@
             margin-bottom: 20px;
         }
 
-        .customer-select:focus {
-            outline: none;
-            border-color: #8B4513;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
@@ -123,10 +119,6 @@
             border-bottom: 1px solid #f0f0f0;
         }
 
-        tr:hover {
-            background: #fafafa;
-        }
-
         .badge {
             display: inline-block;
             padding: 4px 12px;
@@ -135,78 +127,16 @@
             font-weight: 600;
         }
 
-        .badge-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
         .badge-info {
             background: #d1ecf1;
             color: #0c5460;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #8B4513;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #6d3410;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
-        }
-
-        .btn-primary:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .redeem-form {
-            display: grid;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .form-group input,
-        .form-group select {
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #8B4513;
         }
 
         .loading {
             text-align: center;
             padding: 40px;
             color: #666;
+            font-size: 18px;
         }
 
         .error {
@@ -214,16 +144,6 @@
             color: #721c24;
             padding: 15px;
             border-radius: 8px;
-            border-left: 4px solid #f5c6cb;
-            margin-bottom: 20px;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #c3e6cb;
             margin-bottom: 20px;
         }
 
@@ -247,8 +167,6 @@
             const [redemptions, setRedemptions] = useState([]);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
-            const [success, setSuccess] = useState(null);
-            const [rewardType, setRewardType] = useState('');
 
             useEffect(() => {
                 fetchCustomers();
@@ -263,23 +181,30 @@
 
             const fetchCustomers = async () => {
                 try {
+                    console.log('Fetching customers...');
                     const response = await fetch('/api/customers');
                     const data = await response.json();
-                    setCustomers(data.customers || []);
+                    console.log('Customers response:', data);
+                    
                     if (data.customers && data.customers.length > 0) {
+                        setCustomers(data.customers);
                         setSelectedCustomer(data.customers[0]);
+                    } else {
+                        setError('No customers found');
                     }
                     setLoading(false);
                 } catch (err) {
-                    setError('Failed to load customers');
+                    console.error('Error fetching customers:', err);
+                    setError('Failed to load customers: ' + err.message);
                     setLoading(false);
                 }
             };
 
             const fetchTransactions = async (email) => {
                 try {
-                    const response = await fetch(`/api/transactions/${email}`);
+                    const response = await fetch(`/api/transactions/${encodeURIComponent(email)}`);
                     const data = await response.json();
+                    console.log('Transactions response:', data);
                     setTransactions(data.transactions || []);
                 } catch (err) {
                     console.error('Failed to load transactions:', err);
@@ -288,74 +213,54 @@
 
             const fetchRedemptions = async (email) => {
                 try {
-                    const response = await fetch(`/api/redemptions/${email}`);
+                    const response = await fetch(`/api/redemptions/${encodeURIComponent(email)}`);
                     const data = await response.json();
+                    console.log('Redemptions response:', data);
                     setRedemptions(data.redemptions || []);
                 } catch (err) {
                     console.error('Failed to load redemptions:', err);
                 }
             };
 
-            const handleRedeem = async (e) => {
-                e.preventDefault();
-                setError(null);
-                setSuccess(null);
+            const formatNumber = (num) => {
+                const n = Number(num);
+                return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            };
 
-                if (!rewardType) {
-                    setError('Please select a reward type');
-                    return;
-                }
-
-                // Extract points from reward type string (e.g., "Free Coffee (100 points)")
-                const pointsMatch = rewardType.match(/\((\d+) points\)/);
-                if (!pointsMatch) {
-                    setError('Invalid reward type selected');
-                    return;
-                }
-                
-                const points = parseInt(pointsMatch[1]);
-                if (points > selectedCustomer.points_available) {
-                    setError(`Insufficient points. You need ${points} points but only have ${selectedCustomer.points_available} available.`);
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/redeem', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            customer_email: selectedCustomer.customer_email,
-                            points_redeemed: points,
-                            reward_type: rewardType
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (response.ok) {
-                        setSuccess(`Successfully redeemed ${points} points for ${rewardType}!`);
-                        setRewardType('');
-                        fetchRedemptions(selectedCustomer.customer_email);
-                    } else {
-                        setError(data.error || 'Redemption failed');
-                    }
-                } catch (err) {
-                    setError('Failed to process redemption');
-                }
+            const formatCurrency = (num) => {
+                const n = Number(num);
+                return isNaN(n) ? '$0.00' : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
             if (loading) {
-                return <div className="loading">Loading...</div>;
+                return (
+                    <div className="container">
+                        <div className="loading">⏳ Loading customer data from Unity Catalog...</div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="container">
+                        <div className="error">{error}</div>
+                    </div>
+                );
             }
 
             if (!selectedCustomer) {
-                return <div className="container"><div className="empty">No customers found</div></div>;
+                return (
+                    <div className="container">
+                        <div className="empty">No customers available</div>
+                    </div>
+                );
             }
 
             return (
                 <div className="container">
                     <div className="header">
                         <h1>🥐 Bakehouse Rewards</h1>
-                        <p>Customer Loyalty Portal</p>
+                        <p>Customer Loyalty Portal - Unity Catalog Integration</p>
                     </div>
 
                     <select 
@@ -363,7 +268,7 @@
                         value={selectedCustomer.customer_email}
                         onChange={(e) => {
                             const customer = customers.find(c => c.customer_email === e.target.value);
-                            setSelectedCustomer(customer);
+                            if (customer) setSelectedCustomer(customer);
                         }}
                     >
                         {customers.map(customer => (
@@ -376,44 +281,20 @@
                     <div className="stats-grid">
                         <div className="stat-card">
                             <h3>Total Points</h3>
-                            <div className="value">{selectedCustomer.total_points?.toLocaleString() || 0}</div>
+                            <div className="value">{formatNumber(selectedCustomer.total_points)}</div>
                         </div>
                         <div className="stat-card">
                             <h3>Available Points</h3>
-                            <div className="value">{selectedCustomer.points_available?.toLocaleString() || 0}</div>
+                            <div className="value">{formatNumber(selectedCustomer.points_available)}</div>
                         </div>
                         <div className="stat-card">
                             <h3>Total Spent</h3>
-                            <div className="value">${selectedCustomer.total_spent?.toLocaleString() || 0}</div>
+                            <div className="value">{formatCurrency(selectedCustomer.total_spent)}</div>
                         </div>
                         <div className="stat-card">
                             <h3>Transactions</h3>
-                            <div className="value">{selectedCustomer.transaction_count || 0}</div>
+                            <div className="value">{formatNumber(selectedCustomer.transaction_count)}</div>
                         </div>
-                    </div>
-
-                    <div className="section">
-                        <h2>💳 Redeem Points</h2>
-                        {error && <div className="error">{error}</div>}
-                        {success && <div className="success">{success}</div>}
-                        <form className="redeem-form" onSubmit={handleRedeem}>
-                            <div className="form-group">
-                                <label>Reward Type</label>
-                                <select 
-                                    value={rewardType}
-                                    onChange={(e) => setRewardType(e.target.value)}
-                                >
-                                    <option value="">Select reward...</option>
-                                    <option value="Free Coffee (100 points)">Free Coffee (100 points)</option>
-                                    <option value="Free Pastry (150 points)">Free Pastry (150 points)</option>
-                                    <option value="$5 Discount (250 points)">$5 Discount (250 points)</option>
-                                    <option value="$10 Discount (500 points)">$10 Discount (500 points)</option>
-                                </select>
-                            </div>
-                            <button type="submit" className="btn btn-primary">
-                                Redeem Now
-                            </button>
-                        </form>
                     </div>
 
                     <div className="section">
@@ -434,11 +315,11 @@
                                 <tbody>
                                     {transactions.map(txn => (
                                         <tr key={txn.transaction_id}>
-                                            <td>{txn.transaction_date}</td>
-                                            <td>{txn.transaction_id}</td>
-                                            <td><span className="badge badge-info">{txn.product_category}</span></td>
-                                            <td>${txn.amount?.toFixed(2) || '0.00'}</td>
-                                            <td>+{txn.points_earned}</td>
+                                            <td>{txn.transaction_date || 'N/A'}</td>
+                                            <td>{txn.transaction_id || 'N/A'}</td>
+                                            <td><span className="badge badge-info">{txn.product_category || 'N/A'}</span></td>
+                                            <td>{formatCurrency(txn.amount)}</td>
+                                            <td>+{formatNumber(txn.points_earned)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -448,30 +329,7 @@
 
                     <div className="section">
                         <h2>🎁 Redemption History</h2>
-                        {redemptions.length === 0 ? (
-                            <div className="empty">No redemptions yet</div>
-                        ) : (
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Redemption ID</th>
-                                        <th>Reward Type</th>
-                                        <th>Points Redeemed</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {redemptions.map(red => (
-                                        <tr key={red.redemption_id}>
-                                            <td>{red.redemption_date}</td>
-                                            <td>{red.redemption_id}</td>
-                                            <td><span className="badge badge-success">{red.reward_type}</span></td>
-                                            <td>-{red.points_redeemed}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
+                        <div className="empty">Lakebase integration coming soon...</div>
                     </div>
                 </div>
             );
