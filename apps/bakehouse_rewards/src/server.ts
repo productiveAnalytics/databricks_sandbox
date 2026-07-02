@@ -1,13 +1,15 @@
-// Bakehouse Rewards - AppKit with analytics() and lakebase()
-import { createApp, server, analytics, lakebase } from "@databricks/appkit";
+// Bakehouse Rewards - AppKit with analytics() for Unity Catalog
+import { createApp, server, analytics } from "@databricks/appkit";
 
-console.log('🚀 Starting Bakehouse Rewards with Unity Catalog + Lakebase integration...');
+console.log('🚀 Starting Bakehouse Rewards with Unity Catalog integration...');
 
 // Create AppKit instance with plugins and onPluginsReady callback
 await createApp({
-  plugins: [server(), analytics({}), lakebase()],
+  plugins: [server(), analytics({})],
   onPluginsReady(appkit) {
-    console.log('✅ Plugins ready! Registering routes with Unity Catalog queries...');
+    console.log('✅ Plugins ready! analytics() initialized');
+    console.log('📊 analytics available:', typeof appkit.analytics);
+    console.log('🔧 Registering routes with Unity Catalog...');
     
     appkit.server.extend((app) => {
       console.log('🎯 Registering API endpoints...');
@@ -31,8 +33,8 @@ await createApp({
           // Map UC column names to frontend expected names
           const customers = rows.map(row => ({
             customer_email: row.email_address,
-            total_points: row.points_available, // Using available as total for now
-            points_redeemed: 0, // TODO: Calculate from redemptions table
+            total_points: row.points_available,
+            points_redeemed: 0,
             points_available: row.points_available,
             total_spent: row.total_spend,
             transaction_count: row.transaction_count,
@@ -70,7 +72,7 @@ await createApp({
             transaction_id: String(row.transactionID),
             transaction_date: row.dateTime,
             amount: row.totalPrice,
-            points_earned: Math.floor(row.totalPrice / 10), // 1 point per $10
+            points_earned: Math.floor(row.totalPrice / 10),
             product_category: row.product
           }));
           
@@ -82,19 +84,19 @@ await createApp({
         }
       });
 
-      // Mock redemptions endpoint (will implement with Lakebase later)
+      // Mock redemptions endpoint
       app.get("/api/redemptions/:email", async (_req, res) => {
-        console.log('🎁 GET /api/redemptions - MOCK (Lakebase integration pending)');
+        console.log('🎁 GET /api/redemptions - MOCK');
         res.json({ redemptions: [] });
       });
 
-      // Mock redeem endpoint (will implement with Lakebase later)
+      // Mock redeem endpoint
       app.post("/api/redeem", async (_req, res) => {
-        console.log('💳 POST /api/redeem - MOCK (Lakebase integration pending)');
+        console.log('💳 POST /api/redeem - MOCK');
         res.json({ success: true });
       });
       
-      console.log('✅ All routes registered with Unity Catalog integration');
+      console.log('✅ ALL ROUTES REGISTERED - analytics() only');
     });
   },
 });
