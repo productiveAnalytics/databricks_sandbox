@@ -2,11 +2,6 @@ env:
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: serverless-sql-warehouse
 
-resources:
-  - name: lakebase-psql
-    postgres:
-      permission: CAN_CONNECT_AND_CREATE
-
 command:
   - npm
   - start

@@ -1,12 +1,13 @@
-// Bakehouse Rewards - AppKit with analytics() and lakebase()
-import { createApp, server, analytics, lakebase } from "@databricks/appkit";
+// Bakehouse Rewards - AppKit with analytics()
+// Note: lakebase() plugin will be added when implementing real redemptions
+import { createApp, server, analytics } from "@databricks/appkit";
 
 // Create AppKit instance with plugins
 const AppKit = await createApp({
-  plugins: [server(), analytics({}), lakebase()],
+  plugins: [server(), analytics({})],
 });
 
-console.log('✅ AppKit initialized with analytics() and lakebase() plugins');
+console.log('✅ AppKit initialized with analytics() plugin');
 
 // Register API endpoints
 AppKit.server.extend((app) => {
