@@ -10,6 +10,7 @@ const AppKit = await createApp({
 console.log('✅ AppKit initialized with analytics() plugin');
 
 // Register API endpoints
+console.log('📝 Registering API routes...');
 AppKit.server.extend((app) => {
   // MOCK Customers endpoint for testing UI
   // TODO: Replace with real Unity Catalog query
@@ -89,6 +90,8 @@ AppKit.server.extend((app) => {
     console.log('💳 POST /api/redeem - MOCK');
     res.json({ success: true });
   });
+  
+  console.log('✅ Routes registered successfully (MOCK MODE)');
 });
 
 console.log('🎉 Bakehouse Rewards ready (MOCK MODE)');
