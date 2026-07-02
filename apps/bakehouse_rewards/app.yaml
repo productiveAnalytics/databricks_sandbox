@@ -1,6 +1,7 @@
-# Standard resource names for AppKit auto-discovery
-# sql-warehouse: for analytics() plugin (Lakehouse)
-# postgres: for lakebase() plugin (Lakebase)
+# Explicitly inject sql-warehouse resource as environment variable
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
 
 command:
   - npm
