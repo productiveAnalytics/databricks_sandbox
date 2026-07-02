@@ -9,13 +9,8 @@ const port = process.env.PORT || 8000;
 app.use(express.json());
 app.use(cors());
 
-// Serve static files from public directory
+// Serve static files from Vite build output
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve React frontend for root route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // Health check
 app.get('/api/health', (req, res) => {
