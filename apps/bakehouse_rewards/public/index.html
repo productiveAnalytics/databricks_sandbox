@@ -399,8 +399,8 @@
                             }));
                         }
                         
-                        // Refresh full data to ensure consistency
-                        await fetchCustomers();
+                        // Refresh full data to ensure consistency (preserve current customer)
+                        await fetchCustomers(selectedCustomer.customer_email);
                         await fetchRedemptions(selectedCustomer.customer_email);
                         
                         // Clear success message after 5 seconds
