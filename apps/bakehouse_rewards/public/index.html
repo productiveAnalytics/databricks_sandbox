@@ -304,7 +304,7 @@
                 }
             }, [selectedReward]);
 
-            const fetchCustomers = async () => {
+            const fetchCustomers = async (preserveEmail = null) => {
                 try {
                     console.log('Fetching customers...');
                     const response = await fetch('/api/customers');
@@ -313,7 +313,18 @@
                     
                     if (data.customers && data.customers.length > 0) {
                         setCustomers(data.customers);
-                        setSelectedCustomer(data.customers[0]);
+                        
+                        // Preserve the currently selected customer if email is provided
+                        if (preserveEmail) {
+                            const preservedCustomer = data.customers.find(c => c.customer_email === preserveEmail);
+                            if (preservedCustomer) {
+                                setSelectedCustomer(preservedCustomer);
+                            } else {
+                                setSelectedCustomer(data.customers[0]);
+                            }
+                        } else {
+                            setSelectedCustomer(data.customers[0]);
+                        }
                     } else {
                         setError('No customers found');
                     }
@@ -388,8 +399,8 @@
                             }));
                         }
                         
-                        // Refresh full data to ensure consistency
-                        await fetchCustomers();
+                        // Refresh full data to ensure consistency (preserve current customer)
+                        await fetchCustomers(selectedCustomer.customer_email);
                         await fetchRedemptions(selectedCustomer.customer_email);
                         
                         // Clear success message after 5 seconds
