@@ -353,9 +353,9 @@ function App() {
           </Card>
 
           {/* Recent Transactions */}
-          <Card title="📊 Recent Transactions">
+          <Card title="📊 Recent Transactions (Last 5)">
             <Table
-              dataSource={transactions}
+              dataSource={transactions.slice(0, 5)}
               columns={transactionColumns}
               rowKey="transaction_id"
               pagination={false}
@@ -364,9 +364,9 @@ function App() {
           </Card>
 
           {/* Redemption History */}
-          <Card title="🎁 Redemption History">
+          <Card title="🎁 Redemption History (Last 5)">
             <Table
-              dataSource={redemptions}
+              dataSource={redemptions.slice(0, 5)}
               columns={redemptionColumns}
               rowKey="redemption_id"
               pagination={false}

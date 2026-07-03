@@ -100,6 +100,79 @@
             margin-bottom: 20px;
         }
 
+        .redemption-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #8B4513;
+        }
+
+        .redeem-button {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: flex-end;
+            transition: background 0.2s;
+        }
+
+        .redeem-button:hover {
+            background: #6d3410;
+        }
+
+        .redeem-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -176,6 +249,12 @@
             background: #f3e5f5;
             color: #6a1b9a;
         }
+
+        @media (max-width: 768px) {
+            .redemption-form {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -191,6 +270,21 @@
             const [redemptions, setRedemptions] = useState([]);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
+            
+            // Redemption form state
+            const [selectedReward, setSelectedReward] = useState('Free Coffee');
+            const [pointsToRedeem, setPointsToRedeem] = useState(100);
+            const [redeeming, setRedeeming] = useState(false);
+            const [redemptionStatus, setRedemptionStatus] = useState(null);
+            const [redemptionMessage, setRedemptionMessage] = useState('');
+
+            const rewardOptions = [
+                { name: 'Free Coffee', points: 100 },
+                { name: 'Free Pastry', points: 150 },
+                { name: 'Free Sandwich', points: 250 },
+                { name: '10% Off Next Purchase', points: 200 },
+                { name: 'Free Birthday Cake', points: 500 }
+            ];
 
             useEffect(() => {
                 fetchCustomers();
@@ -202,6 +296,13 @@
                     fetchRedemptions(selectedCustomer.customer_email);
                 }
             }, [selectedCustomer]);
+
+            useEffect(() => {
+                const reward = rewardOptions.find(r => r.name === selectedReward);
+                if (reward) {
+                    setPointsToRedeem(reward.points);
+                }
+            }, [selectedReward]);
 
             const fetchCustomers = async () => {
                 try {
@@ -243,6 +344,61 @@
                     setRedemptions(data.redemptions || []);
                 } catch (err) {
                     console.error('Failed to load redemptions:', err);
+                }
+            };
+
+            const handleRedeem = async (e) => {
+                e.preventDefault();
+                
+                if (!selectedCustomer || pointsToRedeem > selectedCustomer.points_available) {
+                    setRedemptionStatus('error');
+                    setRedemptionMessage('Insufficient points available');
+                    return;
+                }
+
+                setRedeeming(true);
+                setRedemptionStatus(null);
+                setRedemptionMessage('');
+
+                try {
+                    const response = await fetch('/api/redeem', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            customer_email: selectedCustomer.customer_email,
+                            points_redeemed: pointsToRedeem,
+                            reward_type: selectedReward
+                        })
+                    });
+
+                    const data = await response.json();
+                    console.log('Redemption response:', data);
+
+                    if (data.success) {
+                        setRedemptionStatus('success');
+                        setRedemptionMessage(`Successfully redeemed ${pointsToRedeem} points for ${selectedReward}!`);
+                        
+                        // Refresh data
+                        await fetchCustomers();
+                        await fetchRedemptions(selectedCustomer.customer_email);
+                        
+                        // Clear success message after 5 seconds
+                        setTimeout(() => {
+                            setRedemptionStatus(null);
+                            setRedemptionMessage('');
+                        }, 5000);
+                    } else {
+                        setRedemptionStatus('error');
+                        setRedemptionMessage(data.error || 'Failed to redeem points');
+                    }
+                } catch (err) {
+                    console.error('Redemption error:', err);
+                    setRedemptionStatus('error');
+                    setRedemptionMessage('Failed to redeem points: ' + err.message);
+                } finally {
+                    setRedeeming(false);
                 }
             };
 
@@ -335,6 +491,55 @@
                             <h3>Transactions</h3>
                             <div className="value">{formatNumber(selectedCustomer.transaction_count)}</div>
                         </div>
+                    </div>
+
+                    <div className="section">
+                        <h2>
+                            💳 Redeem Points
+                            <span className="integration-badge badge-lakebase">Lakebase Postgres</span>
+                        </h2>
+                        
+                        {redemptionStatus === 'success' && (
+                            <div className="success-message">{redemptionMessage}</div>
+                        )}
+                        {redemptionStatus === 'error' && (
+                            <div className="error-message">{redemptionMessage}</div>
+                        )}
+
+                        <form className="redemption-form" onSubmit={handleRedeem}>
+                            <div className="form-group">
+                                <label htmlFor="reward">Select Reward</label>
+                                <select 
+                                    id="reward"
+                                    value={selectedReward}
+                                    onChange={(e) => setSelectedReward(e.target.value)}
+                                    disabled={redeeming}
+                                >
+                                    {rewardOptions.map(reward => (
+                                        <option key={reward.name} value={reward.name}>
+                                            {reward.name} ({reward.points} points)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="points">Points to Redeem</label>
+                                <input 
+                                    type="number"
+                                    id="points"
+                                    value={pointsToRedeem}
+                                    readOnly
+                                    disabled={redeeming}
+                                />
+                            </div>
+                            <button 
+                                type="submit" 
+                                className="redeem-button"
+                                disabled={redeeming || pointsToRedeem > selectedCustomer.points_available}
+                            >
+                                {redeeming ? '⏳ Redeeming...' : '🎁 Redeem'}
+                            </button>
+                        </form>
                     </div>
 
                     <div className="section">
