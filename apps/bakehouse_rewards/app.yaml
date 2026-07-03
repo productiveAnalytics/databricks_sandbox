@@ -1,0 +1,18 @@
+# Standard resource names for AppKit auto-discovery
+# sql-warehouse: for analytics() plugin (Lakehouse/Unity Catalog)
+# postgres: for lakebase() plugin (Lakebase/Postgres)
+#
+# When a postgres resource is configured, Databricks automatically injects:
+# PGHOST, PGDATABASE, PGUSER, PGPORT, PGSSLMODE, PGAPPNAME
+# No manual env mapping needed!
+
+env:
+  # Only explicitly inject sql-warehouse ID
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+
+command:
+  - npm
+  - start

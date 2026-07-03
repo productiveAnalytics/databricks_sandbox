@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakehouse Rewards - Customer Portal</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #8B4513;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #8B4513;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            color: #8B4513;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .customer-select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .redemption-form {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #8B4513;
+        }
+
+        .redeem-button {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: flex-end;
+            transition: background 0.2s;
+        }
+
+        .redeem-button:hover {
+            background: #6d3410;
+        }
+
+        .redeem-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f8f8;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .integration-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-lakehouse {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-lakebase {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+
+        @media (max-width: 768px) {
+            .redemption-form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [customers, setCustomers] = useState([]);
+            const [selectedCustomer, setSelectedCustomer] = useState(null);
+            const [transactions, setTransactions] = useState([]);
+            const [redemptions, setRedemptions] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            
+            // Redemption form state
+            const [selectedReward, setSelectedReward] = useState('Free Coffee');
+            const [pointsToRedeem, setPointsToRedeem] = useState(100);
+            const [redeeming, setRedeeming] = useState(false);
+            const [redemptionStatus, setRedemptionStatus] = useState(null);
+            const [redemptionMessage, setRedemptionMessage] = useState('');
+
+            const rewardOptions = [
+                { name: 'Free Coffee', points: 100 },
+                { name: 'Free Pastry', points: 150 },
+                { name: 'Free Sandwich', points: 250 },
+                { name: '10% Off Next Purchase', points: 200 },
+                { name: 'Free Birthday Cake', points: 500 }
+            ];
+
+            useEffect(() => {
+                fetchCustomers();
+            }, []);
+
+            useEffect(() => {
+                if (selectedCustomer) {
+                    fetchTransactions(selectedCustomer.customer_email);
+                    fetchRedemptions(selectedCustomer.customer_email);
+                }
+            }, [selectedCustomer]);
+
+            useEffect(() => {
+                const reward = rewardOptions.find(r => r.name === selectedReward);
+                if (reward) {
+                    setPointsToRedeem(reward.points);
+                }
+            }, [selectedReward]);
+
+            const fetchCustomers = async (preserveEmail = null) => {
+                try {
+                    console.log('Fetching customers...');
+                    const response = await fetch('/api/customers');
+                    const data = await response.json();
+                    console.log('Customers response:', data);
+                    
+                    if (data.customers && data.customers.length > 0) {
+                        setCustomers(data.customers);
+                        
+                        // Preserve the currently selected customer if email is provided
+                        if (preserveEmail) {
+                            const preservedCustomer = data.customers.find(c => c.customer_email === preserveEmail);
+                            if (preservedCustomer) {
+                                setSelectedCustomer(preservedCustomer);
+                            } else {
+                                setSelectedCustomer(data.customers[0]);
+                            }
+                        } else {
+                            setSelectedCustomer(data.customers[0]);
+                        }
+                    } else {
+                        setError('No customers found');
+                    }
+                    setLoading(false);
+                } catch (err) {
+                    console.error('Error fetching customers:', err);
+                    setError('Failed to load customers: ' + err.message);
+                    setLoading(false);
+                }
+            };
+
+            const fetchTransactions = async (email) => {
+                try {
+                    const response = await fetch(`/api/transactions/${encodeURIComponent(email)}?limit=5`);
+                    const data = await response.json();
+                    console.log('Transactions response:', data);
+                    setTransactions(data.transactions || []);
+                } catch (err) {
+                    console.error('Failed to load transactions:', err);
+                }
+            };
+
+            const fetchRedemptions = async (email) => {
+                try {
+                    const response = await fetch(`/api/redemptions/${encodeURIComponent(email)}?limit=5`);
+                    const data = await response.json();
+                    console.log('Redemptions response:', data);
+                    setRedemptions(data.redemptions || []);
+                } catch (err) {
+                    console.error('Failed to load redemptions:', err);
+                }
+            };
+
+            const handleRedeem = async (e) => {
+                e.preventDefault();
+                
+                if (!selectedCustomer || pointsToRedeem > selectedCustomer.points_available) {
+                    setRedemptionStatus('error');
+                    setRedemptionMessage('Insufficient points available');
+                    return;
+                }
+
+                setRedeeming(true);
+                setRedemptionStatus(null);
+                setRedemptionMessage('');
+
+                try {
+                    const response = await fetch('/api/redeem', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            customer_email: selectedCustomer.customer_email,
+                            points_redeemed: pointsToRedeem,
+                            reward_type: selectedReward
+                        })
+                    });
+
+                    const data = await response.json();
+                    console.log('Redemption response:', data);
+
+                    if (data.success) {
+                        setRedemptionStatus('success');
+                        setRedemptionMessage(`Successfully redeemed ${pointsToRedeem} points for ${selectedReward}!`);
+                        
+                        // Immediately update UI with new available points
+                        if (data.new_available_points !== undefined) {
+                            setSelectedCustomer(prev => ({
+                                ...prev,
+                                points_available: data.new_available_points
+                            }));
+                        }
+                        
+                        // Refresh full data to ensure consistency (preserve current customer)
+                        await fetchCustomers(selectedCustomer.customer_email);
+                        await fetchRedemptions(selectedCustomer.customer_email);
+                        
+                        // Clear success message after 5 seconds
+                        setTimeout(() => {
+                            setRedemptionStatus(null);
+                            setRedemptionMessage('');
+                        }, 5000);
+                    } else {
+                        setRedemptionStatus('error');
+                        setRedemptionMessage(data.error || 'Failed to redeem points');
+                    }
+                } catch (err) {
+                    console.error('Redemption error:', err);
+                    setRedemptionStatus('error');
+                    setRedemptionMessage('Failed to redeem points: ' + err.message);
+                } finally {
+                    setRedeeming(false);
+                }
+            };
+
+            const formatNumber = (num) => {
+                const n = Number(num);
+                return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            };
+
+            const formatCurrency = (num) => {
+                const n = Number(num);
+                return isNaN(n) ? '$0.00' : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            // Date formatting is now handled server-side for consistency
+            const formatDate = (dateStr) => {
+                return dateStr || 'N/A';
+            };
+
+            if (loading) {
+                return (
+                    <div className="container">
+                        <div className="loading">⏳ Loading customer data from Lakehouse...</div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="container">
+                        <div className="error">{error}</div>
+                    </div>
+                );
+            }
+
+            if (!selectedCustomer) {
+                return (
+                    <div className="container">
+                        <div className="empty">No customers available</div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>🥐 Bakehouse Rewards</h1>
+                        <p>Customer Loyalty Portal - Lakehouse + Lakebase Integration</p>
+                    </div>
+
+                    <select 
+                        className="customer-select"
+                        value={selectedCustomer.customer_email}
+                        onChange={(e) => {
+                            const customer = customers.find(c => c.customer_email === e.target.value);
+                            if (customer) setSelectedCustomer(customer);
+                        }}
+                    >
+                        {customers.map(customer => (
+                            <option key={customer.customer_email} value={customer.customer_email}>
+                                {customer.customer_email}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <h3>Available Points</h3>
+                            <div className="value">{formatNumber(selectedCustomer.points_available)}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Total Redeemed</h3>
+                            <div className="value">{formatNumber(selectedCustomer.points_redeemed)}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Total Spent</h3>
+                            <div className="value">{formatCurrency(selectedCustomer.total_spent)}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Transactions</h3>
+                            <div className="value">{formatNumber(selectedCustomer.transaction_count)}</div>
+                        </div>
+                    </div>
+
+                    <div className="section">
+                        <h2>
+                            💳 Redeem Points
+                            <span className="integration-badge badge-lakebase">Lakebase Postgres</span>
+                        </h2>
+                        
+                        {redemptionStatus === 'success' && (
+                            <div className="success-message">{redemptionMessage}</div>
+                        )}
+                        {redemptionStatus === 'error' && (
+                            <div className="error-message">{redemptionMessage}</div>
+                        )}
+
+                        <form className="redemption-form" onSubmit={handleRedeem}>
+                            <div className="form-group">
+                                <label htmlFor="reward">Select Reward</label>
+                                <select 
+                                    id="reward"
+                                    value={selectedReward}
+                                    onChange={(e) => setSelectedReward(e.target.value)}
+                                    disabled={redeeming}
+                                >
+                                    {rewardOptions.map(reward => (
+                                        <option key={reward.name} value={reward.name}>
+                                            {reward.name} ({reward.points} points)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button 
+                                type="submit" 
+                                className="redeem-button"
+                                disabled={redeeming}
+                            >
+                                {redeeming ? '⏳ Redeeming...' : '🎁 Redeem'}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="section">
+                        <h2>
+                            📊 Recent Transactions (Last 5)
+                            <span className="integration-badge badge-lakehouse">Unity Catalog</span>
+                        </h2>
+                        {transactions.length === 0 ? (
+                            <div className="empty">No transactions found</div>
+                        ) : (
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Transaction ID</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactions.slice(0, 5).map(txn => (
+                                        <tr key={txn.transaction_id}>
+                                            <td>{txn.transaction_date || 'N/A'}</td>
+                                            <td>{txn.transaction_id || 'N/A'}</td>
+                                            <td><span className="badge badge-info">{txn.product_category || 'N/A'}</span></td>
+                                            <td>{formatCurrency(txn.amount)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+
+                    <div className="section">
+                        <h2>
+                            🎁 Redemption History (Last 5)
+                            <span className="integration-badge badge-lakebase">Lakebase Postgres</span>
+                        </h2>
+                        {redemptions.length === 0 ? (
+                            <div className="empty">No redemptions yet. Start redeeming your points!</div>
+                        ) : (
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Redemption ID</th>
+                                        <th>Reward Type</th>
+                                        <th>Points Redeemed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {redemptions.slice(0, 5).map(redemption => (
+                                        <tr key={redemption.redemption_id}>
+                                            <td>{formatDate(redemption.redemption_date)}</td>
+                                            <td>{redemption.redemption_id}</td>
+                                            <td><span className="badge badge-success">{redemption.reward_type}</span></td>
+                                            <td>-{formatNumber(redemption.points_redeemed)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
