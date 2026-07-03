@@ -205,7 +205,15 @@ await createApp({
             WHERE email_address = '${customer_email}'
           `);
           
-          const earnedPoints = customerResult?.rows?.[0]?.points_available || 0;
+          const customerRows = customerResult?.rows || customerResult?.data || [];
+          if (!customerRows.length) {
+            return res.status(404).json({
+              success: false,
+              error: `Customer not found: ${customer_email}`
+            });
+          }
+          
+          const earnedPoints = parseInt(customerRows[0]?.points_available || 0);
           
           // Get total redeemed points from Lakebase
           const redemptionsResult = await appkit.lakebase.query(`
@@ -216,6 +224,8 @@ await createApp({
           
           const previouslyRedeemed = parseInt(redemptionsResult?.rows?.[0]?.total_redeemed || 0);
           const availablePoints = earnedPoints - previouslyRedeemed;
+          
+          console.log(`🔍 Redemption validation for ${customer_email}: earned=${earnedPoints}, redeemed=${previouslyRedeemed}, available=${availablePoints}, requested=${points_redeemed}`);
           
           if (availablePoints < points_redeemed) {
             return res.status(400).json({
