@@ -380,7 +380,15 @@
                         setRedemptionStatus('success');
                         setRedemptionMessage(`Successfully redeemed ${pointsToRedeem} points for ${selectedReward}!`);
                         
-                        // Refresh data
+                        // Immediately update UI with new available points
+                        if (data.new_available_points !== undefined) {
+                            setSelectedCustomer(prev => ({
+                                ...prev,
+                                points_available: data.new_available_points
+                            }));
+                        }
+                        
+                        // Refresh full data to ensure consistency
                         await fetchCustomers();
                         await fetchRedemptions(selectedCustomer.customer_email);
                         
