@@ -399,8 +399,8 @@
                             }));
                         }
                         
-                        // Refresh full data to ensure consistency (preserve current customer)
-                        await fetchCustomers(selectedCustomer.customer_email);
+                        // Refresh full data to ensure consistency
+                        await fetchCustomers();
                         await fetchRedemptions(selectedCustomer.customer_email);
                         
                         // Clear success message after 5 seconds
@@ -566,7 +566,6 @@
                                         <th>Transaction ID</th>
                                         <th>Category</th>
                                         <th>Amount</th>
-                                        <th>Points Earned</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -576,7 +575,6 @@
                                             <td>{txn.transaction_id || 'N/A'}</td>
                                             <td><span className="badge badge-info">{txn.product_category || 'N/A'}</span></td>
                                             <td>{formatCurrency(txn.amount)}</td>
-                                            <td>+{formatNumber(txn.points_earned)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
