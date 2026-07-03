@@ -1,6 +1,22 @@
 // Bakehouse Rewards - Full Lakehouse + Lakebase integration
 import { createApp, server, analytics, lakebase } from "@databricks/appkit";
 
+// App-wide date/time format configuration
+const APP_DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZoneName: 'short'
+};
+
+// Format date consistently across the app
+function formatAppDateTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleString('en-US', APP_DATE_TIME_FORMAT);
+}
+
 console.log('🚀 Starting Bakehouse Rewards with Lakehouse + Lakebase...');
 
 await createApp({
@@ -137,7 +153,7 @@ await createApp({
           
           const transactions = rows.map(row => ({
             transaction_id: String(row.transactionID),
-            transaction_date: row.dateTime,
+            transaction_date: formatAppDateTime(row.dateTime),
             amount: row.totalPrice,
             points_earned: Math.floor(row.totalPrice / 10),
             product_category: row.product
@@ -152,8 +168,12 @@ await createApp({
       });
 
       // Get redemptions for a specific customer (Lakebase)
+      // Query param: limit=-1 for all rows, limit=N for specific count (default 5)
       app.get("/api/redemptions/:email", async (req, res) => {
-        console.log(`🎁 GET /api/redemptions/${req.params.email}`);
+        const limit = parseInt(req.query.limit as string) || 5;
+        const limitClause = limit === -1 ? '' : `LIMIT ${limit}`;
+        
+        console.log(`🎁 GET /api/redemptions/${req.params.email}?limit=${limit}`);
         try {
           const result = await appkit.lakebase.query(`
             SELECT 
@@ -166,19 +186,19 @@ await createApp({
             FROM rewards.redemptions
             WHERE customer_email = $1
             ORDER BY redemption_date DESC
-            LIMIT 50
+            ${limitClause}
           `, [req.params.email]);
           
           const rows = result?.rows || [];
           
           const redemptions = rows.map(row => ({
             redemption_id: row.redemption_id,
-            redemption_date: row.redemption_date,
+            redemption_date: formatAppDateTime(row.redemption_date),
             reward_type: row.reward_type,
             points_redeemed: row.points_redeemed
           }));
           
-          console.log(`✅ Retrieved ${redemptions.length} redemptions from Lakebase`);
+          console.log(`✅ Retrieved ${redemptions.length} redemptions from Lakebase (limit: ${limit})`);
           res.json({ redemptions });
         } catch (error) {
           console.error('❌ Error fetching redemptions:', error.message);

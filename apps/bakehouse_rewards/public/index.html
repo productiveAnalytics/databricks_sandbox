@@ -431,20 +431,9 @@
                 return isNaN(n) ? '$0.00' : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
+            // Date formatting is now handled server-side for consistency
             const formatDate = (dateStr) => {
-                if (!dateStr) return 'N/A';
-                try {
-                    const date = new Date(dateStr);
-                    return date.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                } catch {
-                    return dateStr;
-                }
+                return dateStr || 'N/A';
             };
 
             if (loading) {
