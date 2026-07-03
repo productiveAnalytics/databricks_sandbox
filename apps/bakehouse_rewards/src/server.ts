@@ -90,8 +90,12 @@ await createApp({
       });
 
       // Get transactions for a specific customer (Unity Catalog)
+      // Query param: limit=-1 for all rows, limit=N for specific count (default 5)
       app.get("/api/transactions/:email", async (req, res) => {
-        console.log(`📋 GET /api/transactions/${req.params.email}`);
+        const limit = parseInt(req.query.limit as string) || 5;
+        const limitClause = limit === -1 ? '' : `LIMIT ${limit}`;
+        
+        console.log(`📋 GET /api/transactions/${req.params.email}?limit=${limit}`);
         try {
           const result = await appkit.analytics.query(`
             SELECT 
@@ -104,7 +108,7 @@ await createApp({
               ON t.customerID = c.customerID
             WHERE c.email_address = '${req.params.email}'
             ORDER BY t.dateTime DESC
-            LIMIT 50
+            ${limitClause}
           `);
           
           const rows = result?.rows || result?.data || result || [];
@@ -117,7 +121,7 @@ await createApp({
             product_category: row.product
           }));
           
-          console.log(`✅ Retrieved ${transactions.length} transactions`);
+          console.log(`✅ Retrieved ${transactions.length} transactions (limit: ${limit})`);
           res.json({ transactions });
         } catch (error) {
           console.error('❌ Error fetching transactions:', error.message);
@@ -126,8 +130,12 @@ await createApp({
       });
 
       // Get redemptions for a specific customer (Lakebase)
+      // Query param: limit=-1 for all rows, limit=N for specific count (default 5)
       app.get("/api/redemptions/:email", async (req, res) => {
-        console.log(`🎁 GET /api/redemptions/${req.params.email}`);
+        const limit = parseInt(req.query.limit as string) || 5;
+        const limitClause = limit === -1 ? '' : `LIMIT ${limit}`;
+        
+        console.log(`🎁 GET /api/redemptions/${req.params.email}?limit=${limit}`);
         try {
           const result = await appkit.lakebase.query(`
             SELECT 
@@ -140,7 +148,7 @@ await createApp({
             FROM rewards.redemptions
             WHERE customer_email = $1
             ORDER BY redemption_date DESC
-            LIMIT 50
+            ${limitClause}
           `, [req.params.email]);
           
           const rows = result?.rows || [];
@@ -152,7 +160,7 @@ await createApp({
             points_redeemed: row.points_redeemed
           }));
           
-          console.log(`✅ Retrieved ${redemptions.length} redemptions from Lakebase`);
+          console.log(`✅ Retrieved ${redemptions.length} redemptions from Lakebase (limit: ${limit})`);
           res.json({ redemptions });
         } catch (error) {
           console.error('❌ Error fetching redemptions:', error.message);

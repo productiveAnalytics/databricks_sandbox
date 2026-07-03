@@ -327,7 +327,7 @@
 
             const fetchTransactions = async (email) => {
                 try {
-                    const response = await fetch(`/api/transactions/${encodeURIComponent(email)}`);
+                    const response = await fetch(`/api/transactions/${encodeURIComponent(email)}?limit=5`);
                     const data = await response.json();
                     console.log('Transactions response:', data);
                     setTransactions(data.transactions || []);
@@ -338,7 +338,7 @@
 
             const fetchRedemptions = async (email) => {
                 try {
-                    const response = await fetch(`/api/redemptions/${encodeURIComponent(email)}`);
+                    const response = await fetch(`/api/redemptions/${encodeURIComponent(email)}?limit=5`);
                     const data = await response.json();
                     console.log('Redemptions response:', data);
                     setRedemptions(data.redemptions || []);
