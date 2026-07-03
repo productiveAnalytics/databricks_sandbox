@@ -273,6 +273,7 @@
             
             // Redemption form state
             const [selectedReward, setSelectedReward] = useState('Free Coffee');
+            const [pointsToRedeem, setPointsToRedeem] = useState(100);
             const [redeeming, setRedeeming] = useState(false);
             const [redemptionStatus, setRedemptionStatus] = useState(null);
             const [redemptionMessage, setRedemptionMessage] = useState('');
@@ -543,7 +544,7 @@
 
                     <div className="section">
                         <h2>
-                            📊 Recent Transactions
+                            📊 Recent Transactions (Last 5)
                             <span className="integration-badge badge-lakehouse">Unity Catalog</span>
                         </h2>
                         {transactions.length === 0 ? (
@@ -560,7 +561,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {transactions.map(txn => (
+                                    {transactions.slice(0, 5).map(txn => (
                                         <tr key={txn.transaction_id}>
                                             <td>{txn.transaction_date || 'N/A'}</td>
                                             <td>{txn.transaction_id || 'N/A'}</td>
@@ -576,7 +577,7 @@
 
                     <div className="section">
                         <h2>
-                            🎁 Redemption History
+                            🎁 Redemption History (Last 5)
                             <span className="integration-badge badge-lakebase">Lakebase Postgres</span>
                         </h2>
                         {redemptions.length === 0 ? (
@@ -592,7 +593,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {redemptions.map(redemption => (
+                                    {redemptions.slice(0, 5).map(redemption => (
                                         <tr key={redemption.redemption_id}>
                                             <td>{formatDate(redemption.redemption_date)}</td>
                                             <td>{redemption.redemption_id}</td>
