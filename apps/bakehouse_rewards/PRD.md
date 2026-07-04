@@ -4,8 +4,8 @@
 
 ## Document Metadata
 
-- **Version**: 1.0  
-- **Last Updated**: January 7, 2025  
+- **Version**: 1.1  
+- **Last Updated**: January 8, 2025  
 - **Author**: Genie Code (Databricks Assistant)  
 - **Target Audience**: LLM code assistants, developers
 - **Git Branch**: `databricks_app__bakehouse_rewards`
@@ -142,6 +142,235 @@ command:
 **Resource Permissions Required**:
 1. **sql-warehouse**: `CAN_USE` permission for app service principal
 2. **postgres**: `CAN_CONNECT_AND_CREATE` permission for app service principal
+
+### 2.4 Infrastructure Provisioning & Permissions (MANDATORY)
+
+**Critical**: These steps are REQUIRED before app deployment. Missing any step will cause runtime failures.
+
+#### 2.4.1 Lakebase Project Creation
+
+**MUST create a separate Lakebase project** - do NOT reuse existing projects:
+
+```bash
+# Option 1: Using databricks apps init (recommended)
+databricks apps init <app-name> \
+  --source-code-path /Workspace/Users/<user>/app-directory \
+  --feature analytics,lakebase
+
+# This creates:
+# - New Lakebase project: projects/<app-name>/branches/production
+# - New database: projects/<app-name>/branches/production/databases/databricks-postgres
+# - Generates databricks.yml with resource configuration
+```
+
+**Project Structure**:
+- Project: `projects/bakehouse-rewards-app`
+- Branch: `projects/bakehouse-rewards-app/branches/production`
+- Database: `projects/bakehouse-rewards-app/branches/production/databases/databricks-postgres`
+
+**Why Separate Project**: 
+- Each app must have isolated Lakebase resources
+- Prevents data contamination between apps
+- Independent schema management (`rewards`, `sweet_dough_rewards`, etc.)
+- Separate access control and audit logs
+
+#### 2.4.2 Resource Configuration (`databricks.yml`)
+
+**Location**: Root of app source directory
+
+**Purpose**: Configure app-level resources (SQL warehouse + Lakebase postgres)
+
+```yaml
+# databricks.yml
+resources:
+  - name: sql-warehouse
+    sql_warehouse:
+      id: <warehouse-id>  # e.g., "7f10ff17778951ac"
+      permission: CAN_USE
+  - name: postgres
+    postgres:
+      branch: projects/bakehouse-rewards-app/branches/production
+      database: projects/bakehouse-rewards-app/branches/production/databases/databricks-postgres
+      permission: CAN_CONNECT_AND_CREATE
+```
+
+**How `databricks.yml` is Used**:
+1. Created by `databricks apps init` command
+2. Read during `databricks apps deploy`
+3. Configures environment variables automatically:
+   - `DATABRICKS_WAREHOUSE_ID` (from sql-warehouse resource)
+   - `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPORT`, `PGSSLMODE` (from postgres resource)
+   - `LAKEBASE_ENDPOINT` (from postgres resource)
+
+**Important**: The `app.yaml` file only references resources by name using `valueFrom`. The actual resource configuration is in `databricks.yml`:
+
+```yaml
+# app.yaml (runtime configuration)
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse  # References resource in databricks.yml
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres       # References resource in databricks.yml
+
+command:
+  - npm
+  - start
+```
+
+#### 2.4.3 Unity Catalog Permissions
+
+**Who Needs Permissions**:
+1. **Service Principal** (app's identity): For app-level operations
+2. **End Users**: For OAuth On-Behalf-Of (OBO) execution
+
+##### Service Principal Grants
+
+**Identity**: Retrieved from `databricks apps get <app-name>`:
+```json
+{
+  "service_principal_client_id": "<uuid>",
+  "service_principal_name": "app-xxxxx <app-name>"
+}
+```
+
+**SQL Grants** (run in SQL editor or notebook):
+
+```sql
+-- Grant schema access using service principal CLIENT ID (not display name)
+GRANT USE SCHEMA ON SCHEMA workspace.bakehouse_demo 
+  TO `<service-principal-client-id>`;
+
+-- Grant SELECT on all tables
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_customers 
+  TO `<service-principal-client-id>`;
+  
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_transactions 
+  TO `<service-principal-client-id>`;
+  
+GRANT SELECT ON TABLE workspace.bakehouse_demo.customer_rewards 
+  TO `<service-principal-client-id>`;
+```
+
+**Example**:
+```sql
+-- Using actual service principal client ID
+GRANT USE SCHEMA ON SCHEMA workspace.bakehouse_demo 
+  TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
+
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_customers 
+  TO `49c4a9ad-c912-4341-ad56-ffc6afc0f9aa`;
+-- ... (repeat for other tables)
+```
+
+**Verification**:
+```sql
+SHOW GRANTS ON SCHEMA workspace.bakehouse_demo;
+-- Should see service principal with USE SCHEMA permission
+```
+
+##### End User Grants (For OAuth OBO)
+
+**Critical**: Apps V2 uses OAuth with On-Behalf-Of (OBO) execution. When a user logs into the app:
+- Queries run as **the logged-in user**, not the service principal
+- User must have SELECT permissions on Unity Catalog tables
+- Without user permissions: `[INSUFFICIENT_PERMISSIONS]` errors in logs
+
+**SQL Grants for Each User**:
+
+```sql
+-- Grant schema access to user
+GRANT USE SCHEMA ON SCHEMA workspace.bakehouse_demo 
+  TO `user@example.com`;
+
+-- Grant SELECT on all tables
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_customers 
+  TO `user@example.com`;
+  
+GRANT SELECT ON TABLE workspace.bakehouse_demo.sales_transactions 
+  TO `user@example.com`;
+  
+GRANT SELECT ON TABLE workspace.bakehouse_demo.customer_rewards 
+  TO `user@example.com`;
+```
+
+**For Demo/Workshop**: Grant to all users in a group:
+
+```sql
+GRANT USE SCHEMA ON SCHEMA workspace.bakehouse_demo 
+  TO `account users`;
+  
+GRANT SELECT ON ALL TABLES IN SCHEMA workspace.bakehouse_demo 
+  TO `account users`;
+```
+
+#### 2.4.4 Lakebase Permissions
+
+**Automatic via Resource Configuration**: The `postgres` resource in `databricks.yml` with `permission: CAN_CONNECT_AND_CREATE` grants:
+- ✅ Connect to database
+- ✅ Create schemas (`CREATE SCHEMA IF NOT EXISTS rewards`)
+- ✅ Create tables within schemas
+- ✅ INSERT, SELECT, UPDATE, DELETE within created schemas
+
+**No Manual Grants Required** for Lakebase - handled by resource configuration.
+
+#### 2.4.5 Complete Deployment Workflow
+
+**Correct Order** (critical - must follow this sequence):
+
+```bash
+# Step 1: Create Unity Catalog schema and tables
+# (See section 3.1 for SQL commands)
+
+# Step 2: Create Lakebase project and generate databricks.yml
+databricks apps init bakehouse-rewards \
+  --source-code-path /Workspace/Users/<user>/bakehouse-rewards \
+  --feature analytics,lakebase
+
+# Step 3: Create app resource (if not exists)
+databricks apps create bakehouse-rewards
+
+# Step 4: Write source files
+# - src/server.ts
+# - public/index.html  
+# - package.json
+# - tsconfig.json
+# - app.yaml
+# - databricks.yml (already created in Step 2)
+
+# Step 5: Grant Unity Catalog permissions to service principal
+# (Run SQL grants shown in 2.4.3)
+
+# Step 6: Grant Unity Catalog permissions to end users
+# (Run SQL grants shown in 2.4.3)
+
+# Step 7: Check app status
+databricks apps get bakehouse-rewards --output JSON
+# Look for: "app_status.state" and "compute_status.state"
+
+# Step 8: Start app if stopped
+if [ "$compute_status" = "STOPPED" ]; then
+  databricks apps start bakehouse-rewards --timeout 20m
+fi
+
+# Step 9: Deploy app
+databricks apps deploy bakehouse-rewards \
+  --source-code-path /Workspace/Users/<user>/bakehouse-rewards
+
+# Step 10: Monitor deployment
+databricks apps logs bakehouse-rewards --tail
+# Expected: "✅ Lakebase schema initialized: rewards.redemptions"
+# Expected: "🎉 Bakehouse Rewards ready"
+```
+
+**Common Errors & Solutions**:
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `error resolving resource postgres` | `databricks.yml` missing or not deployed | Run `databricks apps init` with `--feature lakebase` |
+| `[INSUFFICIENT_PERMISSIONS] User does not have USE SCHEMA` | Missing Unity Catalog grants | Run SQL grants for service principal AND end users |
+| `ConfigurationError: Warehouse ID not found` | Missing `sql-warehouse` in `databricks.yml` | Add sql-warehouse resource with valid warehouse ID |
+| `ConfigurationError: Missing required resources: postgres` | Postgres resource not configured at app level | Ensure `databricks.yml` has postgres resource with branch/database paths |
+| App crashes on startup | Lakebase project doesn't exist | Create separate Lakebase project (don't reuse others) |
 
 ---
 
@@ -864,6 +1093,7 @@ console.log(`Validation:`, {
 
 | Version | Date | Changes | Migration Required |
 |---------|------|---------|-------------------|
+| 1.1 | 2025-01-08 | **Added Section 2.4**: Infrastructure Provisioning & Permissions (MANDATORY) - Lakebase project creation, databricks.yml configuration, Unity Catalog grants for service principal AND end users, complete deployment workflow, common errors/solutions | **YES** - Existing apps must grant UC permissions to end users for OBO |
 | 1.0 | 2025-01-07 | Initial PRD with all critical sections | N/A |
 
 ---
@@ -882,18 +1112,30 @@ console.log(`Validation:`, {
 
 ## 13. Critical Implementation Checklist
 
+### Infrastructure (Section 2.4 - MANDATORY)
+☑️ **Lakebase Project**: Separate project created via `databricks apps init --feature lakebase`  
+☑️ **databricks.yml**: Resource configuration with sql-warehouse AND postgres  
+☑️ **Service Principal Grants**: USE SCHEMA + SELECT on all UC tables (using client ID)  
+☑️ **End User Grants**: USE SCHEMA + SELECT on all UC tables (for OAuth OBO)  
+☑️ **Deployment Order**: Schema → Init → Create → Source → Grants → Start → Deploy  
+
+### Application
 ☑️ **Framework**: Databricks AppKit - NOT Flask/FastAPI/Streamlit  
 ☑️ **Data Source**: Copied tables in `workspace.bakehouse_demo` - NOT samples  
-☑️ **Lakebase**: Postgres with `rewards.redemptions` - NOT in-memory  
-☑️ **Points Calculation**: Dual-platform in backend API  
+☑️ **Lakebase Schema**: Auto-created `rewards` schema with `redemptions` table  
+☑️ **Points Calculation**: Dual-platform (Lakehouse + Lakebase) in backend API  
 ☑️ **Customer Persistence**: `fetchCustomers(preserveEmail)` parameter  
 ☑️ **Date Formatting**: Server-side `APP_DATE_TIME_FORMAT`  
-☑️ **Validation**: Server-side (fields, customer, points)  
-☑️ **SQL Injection**: Parameterized queries for Lakebase  
-☑️ **Permissions**: Service principal granted UC access  
-☑️ **Deployment**: `apps get` → `start` → `deploy`  
-☑️ **Smoke Tests**: Run after deployment  
-☑️ **Demo Flow**: No login, customer selector works  
+☑️ **Validation**: Server-side (fields, customer, points availability)  
+☑️ **SQL Injection**: Parameterized queries ($1, $2) for Lakebase  
+☑️ **Error Handling**: Try-catch with descriptive error messages in logs  
+
+### Deployment & Testing
+☑️ **Pre-Deploy**: Run `apps get` to check status before deploy  
+☑️ **State Machine**: STOPPED → start → RUNNING → deploy  
+☑️ **Log Verification**: Check for "✅ Lakebase schema initialized"  
+☑️ **Smoke Tests**: Test all 4 API endpoints after deployment  
+☑️ **Demo Flow**: No login required, customer selector works, redemptions persist  
 
 ---
 
